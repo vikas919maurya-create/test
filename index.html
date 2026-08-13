@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monk Miner Farm — Network Command Center</title>
+    <meta name="description" content="Professional mining farm remote monitoring dashboard. View all your ASIC miners in real-time from anywhere.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Reset & Base ──────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg:       #060913;
+            --surface:  #0f172a;
+            --panel:    #020617;
+            --border:   #1e293b;
+            --border2:  #334155;
+            --accent:   #38bdf8;
+            --accent2:  #0ea5e9;
+            --green:    #10b981;
+            --green2:   #34d399;
+            --red:      #f43f5e;
+            --red2:     #ef4444;
+            --amber:    #f59e0b;
+            --text:     #e2e8f0;
+            --muted:    #64748b;
+            --muted2:   #94a3b8;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            padding-bottom: 60px;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .blur-effect { filter: blur(14px); pointer-events: none; user-select: none; }
+
+        /* ── Login Screen ──────────────────────────────────────────── */
+        #loginScreen {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, #1e3a5f 0%, var(--bg) 70%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 99999;
+        }
+        .login-card {
+            background: linear-gradient(145deg, #0f172a, #070d1a);
+            border: 1px solid var(--border2);
+            border-radius: 16px;
+            padding: 50px 44px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(56,189,248,0.08);
+        }
+        .login-logo { text-align: center; margin-bottom: 36px; }
+        .login-logo h1 {
+            font-size: 24px; font-weight: 900; letter-spacing: 3px;
+            color: var(--accent); text-shadow: 0 0 20px rgba(56,189,248,0.35);
+        }
+        .login-logo span { font-size: 11px; color: var(--muted); letter-spacing: 2px; display: block; margin-top: 5px; font-family: 'JetBrains Mono', monospace; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 8px; text-transform: uppercase; }
+        .form-group input {
+            width: 100%; padding: 13px 16px;
+            background: var(--panel); color: var(--text);
+            border: 1px solid var(--border2); border-radius: 8px;
+            font-size: 14px; font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        .form-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+        .form-group input::placeholder { color: var(--muted); }
+        /* Fix browser autofill overriding dark background */
+        .form-group input:-webkit-autofill,
+        .form-group input:-webkit-autofill:hover,
+        .form-group input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0px 1000px var(--panel) inset !important;
+            -webkit-text-fill-color: var(--text) !important;
+            caret-color: var(--text);
+            border: 1px solid var(--border2);
+        }
+
+        .login-btn {
+            width: 100%; padding: 14px;
+            background: var(--accent); color: #020617;
+            border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 700; letter-spacing: 1px;
+            cursor: pointer; transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .login-btn:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(56,189,248,0.25); }
+        .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .login-error {
+            margin-top: 14px; padding: 10px 14px;
+            background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3);
+            border-radius: 6px; font-size: 12px; color: var(--red);
+            display: none; text-align: center;
+        }
+        .login-signup { text-align: center; margin-top: 20px; font-size: 12px; color: var(--muted); }
+        .login-signup a { color: var(--accent); text-decoration: none; }
+        .login-signup a:hover { text-decoration: underline; }
+
+        /* Key reveal section */
+        .key-reveal {
+            margin-top: 20px; padding: 14px;
+            background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2);
+            border-radius: 8px; display: none;
+        }
+        .key-reveal label { display: block; font-size: 10px; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 6px; text-transform: uppercase; }
+        .key-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px; font-weight: 700; color: var(--accent);
+            letter-spacing: 3px; cursor: pointer; text-align: center;
+        }
+        .key-hint { font-size: 10px; color: var(--muted); text-align: center; margin-top: 4px; }
+
+        /* ── Header ────────────────────────────────────────────────── */
+        header {
+            background: linear-gradient(180deg, var(--surface) 0%, var(--panel) 100%);
+            padding: 16px 28px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+        }
+        .logo-section h1 { font-size: 20px; color: var(--accent); letter-spacing: 2px; font-weight: 900; text-shadow: 0 0 12px rgba(56,189,248,0.3); }
+        .logo-section span { font-size: 10px; color: var(--muted); display: block; letter-spacing: 1.5px; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+        .header-right { display: flex; gap: 12px; align-items: center; }
+        .stat-badge {
+            padding: 7px 15px; border-radius: 6px; font-weight: 700;
+            font-size: 12px; letter-spacing: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .badge-online { background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+        .badge-offline { background: rgba(244,63,94,0.1); color: var(--red); border: 1px solid rgba(244,63,94,0.3); }
+
+        .user-pill {
+            padding: 7px 14px; border-radius: 6px; font-size: 12px;
+            background: var(--surface); border: 1px solid var(--border2);
+            color: var(--muted2); display: flex; align-items: center; gap: 8px;
+        }
+        .user-pill span { color: var(--accent); font-weight: 600; }
+        .logout-btn {
+            padding: 7px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+            background: transparent; border: 1px solid var(--border2); color: var(--muted);
+            cursor: pointer; transition: all 0.2s; font-family: inherit;
+        }
+        .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+        /* ── Latency Tape ──────────────────────────────────────────── */
+        .latency-tape {
+            background: var(--surface); padding: 7px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; gap: 12px; overflow-x: auto; white-space: nowrap;
+            font-size: 11px; color: var(--muted);
+        }
+        .latency-tape::-webkit-scrollbar { height: 3px; }
+        .latency-tape::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+        .latency-item {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--panel); padding: 4px 10px;
+            border-radius: 4px; border: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .lat-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+        /* ── Grid ──────────────────────────────────────────────────── */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px; padding: 24px;
+            max-width: 1800px; margin: 0 auto;
+        }
+
+        /* ── Empty State ───────────────────────────────────────────── */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center; padding: 80px 20px;
+            color: var(--muted);
+        }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+        .empty-state h3 { font-size: 18px; color: var(--muted2); margin-bottom: 8px; }
+        .empty-state p { font-size: 13px; line-height: 1.6; }
+
+        /* ── Tunnel Panel (replaces iframe) ─────────────────────── */
+        .tunnel-panel {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            height: 100%; gap: 10px; padding: 20px;
+            background: radial-gradient(ellipse at center, rgba(56,189,248,0.05) 0%, transparent 70%);
+        }
+        .tunnel-icon { font-size: 40px; opacity: 0.8; }
+        .tunnel-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 2px;
+            color: var(--green2); font-family: 'JetBrains Mono', monospace;
+        }
+        .tunnel-url {
+            font-size: 11px; color: var(--accent); font-family: 'JetBrains Mono', monospace;
+            max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            background: rgba(56,189,248,0.08); padding: 6px 12px; border-radius: 6px;
+            border: 1px solid rgba(56,189,248,0.2);
+        }
+        .open-btn {
+            margin-top: 8px; padding: 10px 24px;
+            background: var(--accent); color: #020617;
+            font-weight: 700; font-size: 13px; letter-spacing: 1px;
+            border-radius: 8px; text-decoration: none;
+            transition: all 0.2s; display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .open-btn:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(56,189,248,0.3); }
+
+
+        /* ── Node Cards ────────────────────────────────────────────── */
+        .node-card {
+            background: var(--surface); border-radius: 10px;
+            border: 1px solid var(--border); overflow: hidden;
+            min-height: 390px; display: flex; flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .node-card.live-glow { border-color: rgba(56,189,248,0.4); box-shadow: 0 0 20px rgba(56,189,248,0.1), 0 8px 16px rgba(0,0,0,0.3); }
+        .node-card.live-glow:hover { transform: translateY(-3px); border-color: rgba(56,189,248,0.7); box-shadow: 0 0 30px rgba(56,189,248,0.2), 0 12px 24px rgba(0,0,0,0.4); }
+        .node-card:not(.live-glow):hover { transform: translateY(-4px); border-color: var(--accent2); }
+        .node-body { flex-grow: 1; position: relative; background: var(--panel); min-height: 0; }
+        .node-body-iframe { width: 100%; height: 100%; min-height: 340px; border: none; display: block; background: #020617; }
+
+        .node-header {
+            background: var(--panel); padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .node-title {
+            font-size: 13px; font-weight: 700; color: var(--text);
+            letter-spacing: 1px; display: flex; align-items: center; gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .node-title::before { content: '▪'; color: var(--accent); font-size: 16px; }
+        .node-ip { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+        .header-actions { display: flex; align-items: center; gap: 8px; }
+        .status-tag {
+            font-size: 10px; font-weight: 700; padding: 3px 8px;
+            border-radius: 4px; text-transform: uppercase; border: 1px solid transparent;
+            font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+        }
+        .status-tag.live { background: rgba(16,185,129,0.1); color: var(--green2); border-color: rgba(16,185,129,0.3); }
+        .status-tag.dead { background: rgba(244,63,94,0.1); color: var(--red); border-color: rgba(244,63,94,0.3); }
+        .status-tag.checking { background: rgba(245,158,11,0.1); color: var(--amber); border-color: rgba(245,158,11,0.3); }
+
+        .action-btn {
+            background: var(--surface); color: var(--accent);
+            border: 1px solid var(--border2); padding: 5px 10px;
+            font-size: 11px; font-weight: 700; border-radius: 4px;
+            cursor: pointer; transition: all 0.2s; font-family: 'JetBrains Mono', monospace;
+        }
+        .action-btn:hover { background: var(--accent); color: var(--panel); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+
+        .node-body { flex-grow: 1; position: relative; background: var(--panel); }
+        iframe { width: 100%; height: 100%; border: none; display: block; }
+
+        /* ── Overlay Panels ────────────────────────────────────────── */
+        .custom-overlay {
+            position: absolute; inset: 0; background: var(--panel);
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; padding: 25px; text-align: center; z-index: 40;
+        }
+        .loader-ring {
+            width: 42px; height: 42px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            margin-bottom: 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .overlay-text { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .error-icon { font-size: 34px; margin-bottom: 12px; }
+        .error-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: 1px; }
+        .error-desc { font-size: 11px; color: var(--muted); line-height: 1.6; max-width: 230px; }
+
+        /* ── Fullscreen Overlay ────────────────────────────────────── */
+        .fullscreen-overlay {
+            display: none; position: fixed; inset: 0;
+            background: var(--panel); z-index: 10000;
+            flex-direction: column;
+        }
+        .fullscreen-header {
+            background: var(--surface); padding: 16px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .fullscreen-body { flex-grow: 1; position: relative; }
+
+        /* ── Payment Lock ──────────────────────────────────────────── */
+        .lock-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(2,6,23,0.97);
+            z-index: 99999; justify-content: center; align-items: center;
+        }
+        .lock-box {
+            background: linear-gradient(135deg, #1e1b4b, var(--surface));
+            padding: 50px 44px; border-radius: 14px;
+            border: 2px solid var(--red2); text-align: center;
+            max-width: 480px; box-shadow: 0 0 50px rgba(239,68,68,0.2);
+        }
+        .lock-box h2 { color: var(--red); margin-bottom: 14px; font-size: 24px; font-weight: 900; }
+        .lock-box p { color: var(--muted2); margin-bottom: 28px; line-height: 1.7; font-size: 13px; }
+        .whatsapp-btn {
+            background: #22c55e; color: #fff; padding: 14px 28px;
+            font-weight: 700; font-size: 14px; border-radius: 8px;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 16px rgba(34,197,94,0.3); transition: all 0.2s;
+        }
+        .whatsapp-btn:hover { background: #16a34a; transform: translateY(-1px); }
+
+        /* ── Footer Ticker ─────────────────────────────────────────── */
+        footer {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: var(--panel); border-top: 1px solid var(--border);
+            padding: 10px 0; overflow: hidden; z-index: 90;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+        }
+        .marquee { display: flex; white-space: nowrap; animation: marquee 30s linear infinite; }
+        .ticker-item { margin-right: 55px; font-size: 12px; letter-spacing: 1px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .up { color: var(--green); } .down { color: var(--red); }
+        @keyframes marquee { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+
+        /* ── Refresh indicator ─────────────────────────────────────── */
+        .refresh-badge {
+            font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+            padding: 4px 10px; border-radius: 4px; background: var(--panel); border: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ──────────────────────────────────────────────── -->
+<div id="loginScreen" style="display:flex;">
+    <div class="login-card">
+        <div class="login-logo">
+            <h1>MONK MINER FARM</h1>
+            <span>NETWORK COMMAND CENTER</span>
+        </div>
+
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="text" id="loginEmail" placeholder="you@example.com" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="off">
+        </div>
+
+        <button class="login-btn" id="loginBtn" onclick="handleLogin()">
+            ▶ ACCESS COMMAND CENTER
+        </button>
+
+        <div class="login-error" id="loginError"></div>
+
+        <div class="login-signup">
+            Don't have an account? <a href="signup.html">Sign up free</a>
+        </div>
+    </div>
+</div>
+
+<!-- ── MAIN DASHBOARD ─────────────────────────────────────────────── -->
+<div id="mainContent" style="display:none;">
+    <header>
+        <div class="logo-section">
+            <h1>MONK MINER FARM</h1>
+            <span class="mono">NETWORK OPERATIONS SYSTEM • CORE COMMAND CONTROL</span>
+        </div>
+        <div class="header-right">
+            <div class="stat-badge badge-online">● ACTIVE: <span id="onlineCount">0</span></div>
+            <div class="stat-badge badge-offline">● FAULT: <span id="offlineCount">0</span></div>
+
+            <div style="display:inline-flex; background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:3px; gap:4px; font-family:'JetBrains Mono',monospace; font-size:11px;">
+                <button id="modeAllBtn" onclick="setTunnelMode('all')" style="padding:5px 12px; border-radius:4px; font-weight:700; border:none; cursor:pointer; background:var(--accent); color:#020617; transition:all 0.2s;">⚡ CONNECT ALL MINERS</button>
+                <button id="modeManualBtn" onclick="setTunnelMode('manual')" style="padding:5px 12px; border-radius:4px; font-weight:700; border:none; cursor:pointer; background:transparent; color:var(--muted); transition:all 0.2s;">🔘 MANUAL CONNECT</button>
+            </div>
+
+            <div class="user-pill">👤 <span id="userEmailDisplay">—</span></div>
+            <div class="refresh-badge" id="refreshBadge">⟳ —</div>
+            <button class="logout-btn" onclick="handleLogout()">LOGOUT</button>
+        </div>
+    </header>
+
+    <div class="latency-tape" id="latencyTape"></div>
+    <div class="grid-container" id="gridContainer"></div>
+</div>
+
+<!-- ── FULLSCREEN LIVE CONSOLE OVERLAY ─────────────────────────────── -->
+<div class="fullscreen-overlay" id="fullscreenOverlay" style="display:none; position:fixed; inset:0; background:#020617; z-index:9999; flex-direction:column;">
+    <div class="fullscreen-header" style="display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:var(--panel); border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span style="color:var(--green); font-size:14px;">●</span>
+            <h2 id="modalNodeTitle" style="color:var(--accent); font-size:14px; letter-spacing:1px; font-family:'JetBrains Mono',monospace; margin:0;">
+                REMOTE CORE CONSOLE INTERFACE
+            </h2>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <a id="modalExternalLink" class="action-btn" href="#" target="_blank" rel="noopener" style="padding:6px 14px; text-decoration:none; background:rgba(56,189,248,0.15); color:var(--accent); border:1px solid var(--accent);">↗ OPEN IN NEW TAB</a>
+            <button class="action-btn" onclick="closeNodeConsole()" style="padding:6px 16px; background:#ef4444; color:#ffffff; font-weight:bold; border:none; border-radius:6px; cursor:pointer;">✖ CLOSE CONSOLE</button>
+        </div>
+    </div>
+    <div class="fullscreen-body" style="position:relative; flex:1; width:100%; background:#020617;">
+        <div id="modalLoadingSpinner" style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:absolute; inset:0; background:#020617; z-index:10;">
+            <div style="font-size:36px; color:var(--accent);">⚡</div>
+            <div style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:bold; margin-top:12px;">ESTABLISHING SECURE CONSOLE BRIDGE...</div>
+            <div style="color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:6px;">Connecting to miner hardware...</div>
+        </div>
+        <iframe id="fullscreenIframe" src="" style="width:100%; height:100%; border:none; opacity:0; transition:opacity 0.3s;" onload="onConsoleIframeLoaded()"></iframe>
+    </div>
+</div>
+
+<!-- ── PAYMENT LOCK ───────────────────────────────────────────────── -->
+<div class="lock-overlay" id="paymentLockScreen">
+    <div class="lock-box">
+        <h2>🔒 SYSTEM ACCESS LOCKOUT</h2>
+        <p>Aapka remote tracking service module ka time schedule expire ho gaya hai. Agle operational block register karne ke liye turant network owner se sampark karke bill clear karein.</p>
+        <a href="https://wa.me/91XXXXXXXXXX?text=Atul%20Bhai%20dashboard%20renew%20karna%20hai" target="_blank" class="whatsapp-btn">
+            ⚡ SECURE PAY & RE-ACTIVATE
+        </a>
+    </div>
+</div>
+
+<!-- ── FOOTER TICKER ──────────────────────────────────────────────── -->
+<footer>
+    <div class="marquee" id="tickerMarquee">
+        <div class="ticker-item">BTC/USDT: <span class="up">$67,420 ▲</span></div>
+        <div class="ticker-item">ETH/USDT: <span class="up">$3,540 ▲</span></div>
+        <div class="ticker-item">LTC/USDT: <span class="down">$84.20 ▼</span></div>
+        <div class="ticker-item">DOGE/USDT: <span class="up">$0.15 ▲</span></div>
+        <div class="ticker-item">HASH STREAM: <span class="up">● OPTIMAL</span></div>
+        <div class="ticker-item">BTC/USDT: <span class="up">$67,420 ▲</span></div>
+        <div class="ticker-item">ETH/USDT: <span class="up">$3,540 ▲</span></div>
+    </div>
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// ⚙️ CONFIGURATION
+// ════════════════════════════════════════════════════════════════
+const SUPABASE_URL  = "https://qsujmqgaxrtqnrbawfup.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzdWptcWdheHJ0cW5yYmF3ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjEzNjMsImV4cCI6MjEwMjEzNzM2M30.KQvaaL_-bZgwUW4pUxqCsQC0ZhGWnWnLDfvHDYDVwB8";
+
+// Auto-refresh nodes every 5 seconds for live status
+const REFRESH_INTERVAL = 5_000;
+
+// ════════════════════════════════════════════════════════════════
+// 🔐 AUTH STATE
+// ════════════════════════════════════════════════════════════════
+let _session = null;
+
+function supaHeaders(auth = false) {
+    const h = { "apikey": SUPABASE_ANON, "Content-Type": "application/json" };
+    if (auth && _session) h["Authorization"] = `Bearer ${_session.access_token}`;
+    return h;
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🔐 LOGIN
+// ════════════════════════════════════════════════════════════════
+async function handleLogin() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    const btn      = document.getElementById('loginBtn');
+    
+    if (!email || !password) { showLoginError("Please enter email and password."); return; }
+
+    btn.disabled = true;
+    btn.textContent = "AUTHENTICATING...";
+    document.getElementById('loginError').style.display = 'none';
+
+    try {
+        const authResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { "apikey": SUPABASE_ANON, "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        const authData = await authResp.json();
+        if (!authResp.ok) throw new Error(authData.error_description || "Login failed.");
+
+        const access_token = authData.access_token;
+        const user_id      = authData.user.id;
+        const profResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user_id}&select=*`, { headers: { "apikey": SUPABASE_ANON, "Authorization": `Bearer ${access_token}` } });
+        const profiles = await profResp.json();
+        const profile = profiles[0];
+
+        _session = { access_token, user_id, email, expiry_date: profile.expiry_date };
+
+        btn.textContent = "✓ ENTERING COMMAND CENTER...";
+
+        setTimeout(() => {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('userEmailDisplay').textContent = email;
+            initDashboard();
+        }, 800);
+
+    } catch (err) {
+        showLoginError(err.message || "An unexpected error occurred.");
+        btn.disabled = false;
+        btn.textContent = "ACCESS COMMAND CENTER";
+    }
+}
+
+function showLoginError(msg) {
+    const errEl = document.getElementById('loginError');
+    errEl.textContent = "⚠️ " + msg;
+    errEl.style.display = 'block';
+}
+
+async function handleLogout() {
+    if (_session) {
+        try {
+            // Instantly clear viewer status so MonkGo PC client stops tunnels immediately on logout
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+                method: 'PATCH',
+                headers: supaHeaders(true),
+                body: JSON.stringify({ viewer_last_seen: null })
+            });
+        } catch(e) {}
+    }
+    _session = null;
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginBtn').disabled = false;
+    document.getElementById('loginBtn').textContent = "ACCESS COMMAND CENTER";
+}
+
+// ════════════════════════════════════════════════════════════════
+// 📊 DASHBOARD ENGINE
+// ════════════════════════════════════════════════════════════════
+let _currentMode = 'all';
+
+async function syncSavedTunnelMode() {
+    if (!_session) return;
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}&select=tunnel_mode`, { headers: supaHeaders(true) });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data && data[0] && data[0].tunnel_mode) {
+                _currentMode = data[0].tunnel_mode;
+                updateModeUI(_currentMode);
+            }
+        }
+    } catch(e) { console.error("[MODE] Sync error:", e); }
+}
+
+function updateModeUI(mode) {
+    const allBtn    = document.getElementById('modeAllBtn');
+    const manualBtn = document.getElementById('modeManualBtn');
+    if (!allBtn || !manualBtn) return;
+    if (mode === 'all') {
+        allBtn.style.background = 'var(--accent)';
+        allBtn.style.color = '#020617';
+        manualBtn.style.background = 'transparent';
+        manualBtn.style.color = 'var(--muted)';
+    } else {
+        manualBtn.style.background = 'var(--amber)';
+        manualBtn.style.color = '#020617';
+        allBtn.style.background = 'transparent';
+        allBtn.style.color = 'var(--muted)';
+    }
+}
+
+async function setTunnelMode(mode) {
+    if (_currentMode === mode) return; // no-op if same mode
+    _currentMode = mode;
+    updateModeUI(mode);
+
+    if (_session) {
+        try {
+            // 1. Save mode to profiles — EXE reads this every heartbeat
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+                method: 'PATCH',
+                headers: supaHeaders(true),
+                body: JSON.stringify({ tunnel_mode: mode })
+            });
+
+            if (mode === 'manual') {
+                // 2. Manual mode: clear ALL tunnel requests AND wipe bridge URLs
+                //    EXE will detect mode='manual', stop all bridges, set tunnel_url=null
+                await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}`, {
+                    method: 'PATCH',
+                    headers: supaHeaders(true),
+                    body: JSON.stringify({ tunnel_requested: false, tunnel_url: null })
+                });
+            }
+            // mode='all': EXE detects tunnel_mode='all', starts bridges for ALL discovered IPs
+        } catch (e) {
+            console.error("[MODE] Error setting mode:", e);
+        }
+    }
+    loadNodes(); // refresh cards immediately
+}
+
+function openNodeConsole(nodeName, minerIp, tunnelUrl, ev) {
+    if (ev) ev.stopPropagation();
+    if (!tunnelUrl) return;
+
+    document.getElementById('modalNodeTitle').textContent = `${nodeName} (${minerIp}) — LIVE CONTROL CONSOLE`;
+    document.getElementById('modalExternalLink').href = tunnelUrl;
+
+    const spinner = document.getElementById('modalLoadingSpinner');
+    const iframe  = document.getElementById('fullscreenIframe');
+
+    if (spinner && iframe) {
+        spinner.style.display = 'flex';
+        iframe.style.opacity = '0';
+        iframe.src = tunnelUrl;
+    }
+
+    const overlay = document.getElementById('fullscreenOverlay');
+    if (overlay) overlay.style.display = 'flex';
+}
+
+function onConsoleIframeLoaded() {
+    const spinner = document.getElementById('modalLoadingSpinner');
+    const iframe  = document.getElementById('fullscreenIframe');
+    if (spinner && iframe) {
+        spinner.style.display = 'none';
+        iframe.style.opacity = '1';
+    }
+}
+
+function closeNodeConsole() {
+    const overlay = document.getElementById('fullscreenOverlay');
+    const iframe  = document.getElementById('fullscreenIframe');
+    if (overlay && iframe) {
+        overlay.style.display = 'none';
+        iframe.src = ''; // Unload to free memory
+    }
+}
+
+async function requestSingleTunnel(nodeId, minerIp, ev) {
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    if (!_session) return;
+
+    const btn = ev ? ev.currentTarget || ev.target : null;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = "⏳ CONNECTING...";
+        btn.style.opacity = "0.7";
+    }
+
+    try {
+        // Set tunnel_requested=true for this specific node by node_name
+        // EXE polls requested_ips every heartbeat — will start bridge within 10s
+        await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&node_name=eq.${encodeURIComponent(nodeId)}`, {
+            method: 'PATCH',
+            headers: supaHeaders(true),
+            body: JSON.stringify({ tunnel_requested: true })
+        });
+        // Poll faster until bridge URL appears
+        let tries = 0;
+        const poll = setInterval(async () => {
+            tries++;
+            await loadNodes();
+            if (tries >= 12) clearInterval(poll); // Stop after 60s
+        }, 5000);
+    } catch (e) {
+        console.error("[BRIDGE] Request error:", e);
+        if (btn) { btn.disabled = false; btn.innerHTML = "⚡ CONNECT THIS MINER"; btn.style.opacity = "1"; }
+    }
+}
+
+async function sendViewerHeartbeat() {
+    if (!_session) return;
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+            method: 'PATCH',
+            headers: supaHeaders(true),
+            body: JSON.stringify({ viewer_last_seen: new Date().toISOString() })
+        });
+    } catch (e) {
+        console.error("[VIEWER] Heartbeat error:", e);
+    }
+}
+
+function initDashboard() {
+    sendViewerHeartbeat();
+    syncSavedTunnelMode(); // Restore user's last saved mode (CONNECT ALL vs MANUAL CONNECT)
+    setInterval(sendViewerHeartbeat, 10_000); // Heartbeat every 10s to keep On-Demand Tunnels active
+    loadNodes();
+    setInterval(loadNodes, REFRESH_INTERVAL);
+    checkExpiry();
+}
+
+function checkExpiry() {
+    if (!_session || !_session.expiry_date) return;
+    const today  = new Date();
+    const expiry = new Date(_session.expiry_date);
+    if (today >= expiry) {
+        document.getElementById('mainContent').classList.add('blur-effect');
+        document.getElementById('paymentLockScreen').style.display = 'flex';
+    }
+}
+
+async function loadNodes() {
+    if (!_session) return;
+    document.getElementById('refreshBadge').textContent = `⟳ ${new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'})}`;
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&select=*&order=node_name.asc`, { headers: supaHeaders(true) });
+        if (!resp.ok) throw new Error("Fetch failed.");
+        renderNodes(await resp.json());
+    } catch (err) { console.error("[DASHBOARD] Load error:", err); }
+}
+
+function getFarmName(nodeName) {
+    if (!nodeName) return "FARM 1";
+    if (nodeName.includes(" NODE ")) return nodeName.split(" NODE ")[0].trim();
+    return "FARM 1";
+}
+
+function renderNodes(nodes) {
+    const container = document.getElementById('gridContainer');
+    const tape      = document.getElementById('latencyTape');
+    const twentySecAgo = new Date(Date.now() - 20 * 1000);
+
+    const online  = nodes.filter(n => n.status === 'online' && n.last_seen && new Date(n.last_seen) >= twentySecAgo).length;
+    const offline = nodes.length - online;
+    document.getElementById('onlineCount').textContent = online;
+    document.getElementById('offlineCount').textContent = offline;
+
+    // Empty state
+    if (!nodes.length) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">⛏️</div>
+                <h3>No Miners Found Yet</h3>
+                <p>Install <strong>MonkGo.exe</strong> on the Windows PC connected to your mining network.<br>Once running, your miners will appear here automatically.</p>
+            </div>`;
+        tape.innerHTML = '';
+        return;
+    }
+
+    // Latency tape
+    tape.innerHTML = '';
+    nodes.forEach(node => {
+        const isOnline = node.status === 'online';
+        const lastSeen = node.last_seen ? new Date(node.last_seen) : null;
+        const actuallyOnline = isOnline && lastSeen && lastSeen >= twentySecAgo;
+
+        const tape_el = document.createElement('div');
+        tape_el.className = 'latency-item';
+        tape_el.innerHTML = actuallyOnline
+            ? `<span class="lat-dot" style="background:var(--green)"></span> <span style="color:var(--text)">${node.node_name}</span>: <span style="color:var(--green2)">ONLINE</span>`
+            : `<span class="lat-dot" style="background:var(--red)"></span> ${node.node_name}: <span style="color:#ef4444; font-weight:bold;">OFFLINE</span>`;
+        tape.appendChild(tape_el);
+    });
+
+    // Group by Farm PC Client Name
+    const farmGroups = {};
+    nodes.forEach(node => {
+        const farmName = getFarmName(node.node_name);
+        if (!farmGroups[farmName]) farmGroups[farmName] = [];
+        farmGroups[farmName].push(node);
+    });
+
+    container.innerHTML = '';
+
+    Object.keys(farmGroups).sort().forEach(farmName => {
+        const farmNodes = farmGroups[farmName];
+        const farmActiveCount = farmNodes.filter(n => n.status === 'online' && n.last_seen && new Date(n.last_seen) >= twentySecAgo).length;
+
+        const farmWrapper = document.createElement('div');
+        farmWrapper.style.marginBottom = "36px";
+        farmWrapper.style.gridColumn = "1 / -1";
+
+        const headerHtml = `
+            <div style="display:flex; align-items:center; justify-content:space-between; background:var(--panel); border:1px solid var(--border); padding:14px 20px; border-radius:10px; margin-bottom:16px; font-family:'JetBrains Mono', monospace;">
+                <div style="font-size:14px; font-weight:700; color:var(--accent); letter-spacing:1px; display:flex; align-items:center; gap:8px;">
+                    <span>⚡ ${farmName} PC CLIENT</span>
+                </div>
+                <div style="font-size:11px; font-weight:700; padding:5px 14px; border-radius:6px; text-transform:uppercase; letter-spacing:1px; ${farmActiveCount > 0 ? 'background:rgba(16,185,129,0.15); color:var(--green2); border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4);'}">
+                    ${farmActiveCount > 0 ? `● ONLINE (${farmActiveCount} ACTIVE MINER${farmActiveCount > 1 ? 'S' : ''})` : '● OFFLINE / 0 MINERS ACTIVE'}
+                </div>
+            </div>
+            <div class="farm-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:20px;"></div>
+        `;
+        farmWrapper.innerHTML = headerHtml;
+
+        const farmGrid = farmWrapper.querySelector('.farm-grid');
+
+        farmNodes.forEach(node => {
+            const isOnline = node.status === 'online';
+            const lastSeen = node.last_seen ? new Date(node.last_seen) : null;
+            const actuallyOnline = isOnline && lastSeen && lastSeen >= twentySecAgo;
+            const hasBridge = actuallyOnline && node.tunnel_url;
+            const isRequested = node.tunnel_requested;
+
+            const card = document.createElement('div');
+            card.className = `node-card ${actuallyOnline ? 'live-glow' : ''}`;
+            if (!actuallyOnline) {
+                card.style.cssText += 'border-color:rgba(239,68,68,0.4); box-shadow:0 0 15px rgba(239,68,68,0.12),0 8px 16px rgba(0,0,0,0.3); background:#0f131d; cursor:not-allowed;';
+            }
+
+            // ── Determine what to show in the node-body ────────────
+            let bodyHtml = '';
+
+            if (!actuallyOnline) {
+                // Miner is completely offline
+                bodyHtml = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; min-height:220px; gap:10px; padding:20px; text-align:center; background:radial-gradient(ellipse at center, rgba(239,68,68,0.07) 0%, transparent 70%);"
+                    ><div style="font-size:44px; color:#ef4444; opacity:0.85;">🔌</div
+                    ><div style="font-size:13px; font-weight:700; color:#ef4444; letter-spacing:1px; font-family:'JetBrains Mono',monospace;">MINER OFFLINE</div
+                    ><div style="font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace; line-height:1.6;">No heartbeat in &gt;20 seconds.<br>Hardware or PC client is offline.</div
+                ></div>`;
+
+            } else if (hasBridge) {
+                // Bridge is LIVE — iframe fills the full card body
+                // Clicking anywhere on the card opens fullscreen
+                bodyHtml = `
+                    <iframe class="node-body-iframe"
+                        src="${node.tunnel_url}"
+                        loading="lazy"
+                        title="${node.node_name} Live Console"
+                        onclick="event.stopPropagation()"
+                    ></iframe>
+                    <div style="position:absolute; bottom:8px; right:8px; z-index:10; display:flex; gap:6px; pointer-events:auto;">
+                        <a href="${node.tunnel_url}" target="_blank" rel="noopener"
+                            onclick="event.stopPropagation()"
+                            style="background:rgba(15,23,42,0.85); color:var(--muted2); font-size:10px; padding:4px 10px; text-decoration:none; border-radius:4px; font-family:'JetBrains Mono',monospace; border:1px solid var(--border2); backdrop-filter:blur(4px);"
+                        >↗ NEW TAB</a>
+                    </div>`;
+
+            } else if (_currentMode === 'all') {
+                // ALL mode but bridge not ready yet — EXE is working on it
+                bodyHtml = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; min-height:220px; gap:14px; padding:20px; text-align:center; background:radial-gradient(ellipse at center, rgba(56,189,248,0.06) 0%, transparent 70%);"
+                    ><div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.9s linear infinite;"></div
+                    ><div style="color:var(--accent); font-weight:700; font-size:12px; letter-spacing:1px; font-family:'JetBrains Mono',monospace;">ESTABLISHING BRIDGE...</div
+                    ><div style="color:var(--muted); font-size:11px; font-family:'JetBrains Mono',monospace;">${node.miner_ip} — All Miners Mode Active</div
+                    ><div style="color:var(--muted); font-size:10px; font-family:'JetBrains Mono',monospace; opacity:0.7;">MonkGo PC Client is connecting ⚡</div
+                ></div>`;
+
+            } else if (_currentMode === 'manual' && isRequested) {
+                // Manual mode, user clicked START — bridge being established
+                bodyHtml = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; min-height:220px; gap:14px; padding:20px; text-align:center; background:radial-gradient(ellipse at center, rgba(245,158,11,0.06) 0%, transparent 70%);"
+                    ><div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin 0.9s linear infinite;"></div
+                    ><div style="color:var(--amber); font-weight:700; font-size:12px; letter-spacing:1px; font-family:'JetBrains Mono',monospace;">BRIDGE REQUESTED...</div
+                    ><div style="color:var(--muted); font-size:11px; font-family:'JetBrains Mono',monospace;">${node.miner_ip} — Waiting for PC Client</div
+                    ><div style="color:var(--muted); font-size:10px; font-family:'JetBrains Mono',monospace; opacity:0.7;">MonkGo will connect within 10s ⏱</div
+                ></div>`;
+
+            } else {
+                // Manual mode — miner online but no bridge, waiting for user to click START
+                bodyHtml = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; min-height:220px; gap:14px; padding:20px; text-align:center; background:radial-gradient(ellipse at center, rgba(16,185,129,0.05) 0%, transparent 70%);"
+                    ><div style="font-size:38px;">⛏️</div
+                    ><div style="color:var(--green2); font-weight:700; font-size:12px; letter-spacing:1px; font-family:'JetBrains Mono',monospace;">MINER ONLINE — STANDBY</div
+                    ><div style="color:var(--muted); font-size:11px; font-family:'JetBrains Mono',monospace;">${node.miner_ip} — No Bridge Active</div
+                    ><button id="startBtn_${node.node_name.replace(/\s/g,'_')}" onclick="requestSingleTunnel('${node.node_name}','${node.miner_ip}',event)" style="margin-top:6px; background:var(--accent); color:#020617; font-weight:700; font-size:12px; letter-spacing:1px; padding:10px 24px; border:none; border-radius:8px; cursor:pointer; font-family:'JetBrains Mono',monospace; transition:all 0.2s;"
+                        onmouseover="this.style.background='#0ea5e9'" onmouseout="this.style.background='var(--accent)'"
+                    >⚡ START BRIDGE</button
+                ></div>`;
+            }
+
+            // ── Header action button ────────────────────────────────
+            let headerActionBtn = '';
+            if (!actuallyOnline) {
+                headerActionBtn = `<button disabled style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:4px 10px; border-radius:4px; font-size:10px; font-weight:700; cursor:not-allowed; font-family:'JetBrains Mono',monospace;">OFFLINE 🔌</button>`;
+            } else if (hasBridge) {
+                headerActionBtn = `<button onclick="openNodeConsole('${node.node_name}','${node.miner_ip}','${node.tunnel_url}',event)" style="background:var(--accent); color:#020617; border:none; padding:4px 10px; border-radius:4px; font-size:10px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono',monospace;">⛶ FULLSCREEN</button>`;
+            } else if (_currentMode === 'manual' && !isRequested) {
+                headerActionBtn = `<button onclick="requestSingleTunnel('${node.node_name}','${node.miner_ip}',event)" style="background:#10b981; color:#020617; border:none; padding:4px 10px; border-radius:4px; font-size:10px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono',monospace;">⚡ START</button>`;
+            } else {
+                headerActionBtn = `<span style="color:var(--amber); font-size:10px; font-family:'JetBrains Mono',monospace; font-weight:700;">⏳ CONNECTING</span>`;
+            }
+
+            // ── Card click to open fullscreen when bridge is live ──
+            if (hasBridge) {
+                card.style.cursor = 'pointer';
+                card.dataset.nodeName   = node.node_name;
+                card.dataset.minerIp    = node.miner_ip;
+                card.dataset.tunnelUrl  = node.tunnel_url;
+            }
+
+            card.innerHTML = `
+                <div class="node-header">
+                    <div>
+                        <div class="node-title">${node.node_name}</div>
+                        <div class="node-ip">${node.miner_ip || 'IP Unknown'}</div>
+                    </div>
+                    <div class="header-actions">
+                        <span class="status-tag ${actuallyOnline ? 'live' : 'dead'}">${actuallyOnline ? 'ONLINE' : 'OFFLINE'}</span>
+                        ${headerActionBtn}
+                    </div>
+                </div>
+                <div class="node-body" style="${hasBridge ? 'padding:0; overflow:hidden; position:relative;' : ''}">${bodyHtml}</div>`;
+
+            // Attach click AFTER innerHTML is set
+            if (hasBridge) {
+                card.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.tagName === 'IFRAME') return;
+                    openNodeConsole(card.dataset.nodeName, card.dataset.minerIp, card.dataset.tunnelUrl, e);
+                });
+            }
+
+            farmGrid.appendChild(card);
+        });
+
+        container.appendChild(farmWrapper);
+    });
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🔲 FULLSCREEN
+// ════════════════════════════════════════════════════════════════
+function openNode(url, nodeName, isOffline) {
+    document.getElementById('modalNodeTitle').textContent = `REMOTE NODE // ${nodeName}`;
+    const iframe = document.getElementById('fullscreenIframe');
+    const errScr = document.getElementById('modalErrorScreen');
+
+    if (isOffline || !url) {
+        iframe.style.display = 'none';
+        errScr.style.display = 'flex';
+    } else {
+        errScr.style.display = 'none';
+        iframe.style.display = 'block';
+        iframe.src = url;
+    }
+    document.getElementById('fullscreenOverlay').style.display = 'flex';
+}
+
+function closeNode() {
+    document.getElementById('fullscreenOverlay').style.display = 'none';
+    document.getElementById('fullscreenIframe').src = '';
+}
+
+// Close fullscreen with Escape key
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNode(); });
+</script>
+</body>
+</html>
