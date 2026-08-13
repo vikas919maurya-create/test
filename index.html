@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MonkGo — Miner Farm Remote Command Center</title>
+    <meta name="description" content="Professional mining farm remote monitoring dashboard. View all your ASIC miners in real-time from anywhere.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Reset & Base ───────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg:       #060913;
+            --surface:  #0f172a;
+            --panel:    #020617;
+            --border:   #1e293b;
+            --border2:  #334155;
+            --accent:   #38bdf8;
+            --accent2:  #0ea5e9;
+            --green:    #10b981;
+            --green2:   #34d399;
+            --red:      #f43f5e;
+            --red2:     #ef4444;
+            --amber:    #f59e0b;
+            --text:     #e2e8f0;
+            --muted:    #64748b;
+            --muted2:   #94a3b8;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            padding-bottom: 60px;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .blur-effect { filter: blur(14px); pointer-events: none; user-select: none; }
+
+        /* ── Login Screen ───────────────────────────────────────────── */
+        #loginScreen {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, #1e3a5f 0%, var(--bg) 70%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 99999;
+        }
+        .login-card {
+            background: linear-gradient(145deg, #0f172a, #070d1a);
+            border: 1px solid var(--border2);
+            border-radius: 16px;
+            padding: 50px 44px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(56,189,248,0.08);
+        }
+        .login-logo { text-align: center; margin-bottom: 36px; }
+        .login-logo h1 {
+            font-size: 24px; font-weight: 900; letter-spacing: 3px;
+            color: var(--accent); text-shadow: 0 0 20px rgba(56,189,248,0.35);
+        }
+        .login-logo span { font-size: 11px; color: var(--muted); letter-spacing: 2px; display: block; margin-top: 5px; font-family: 'JetBrains Mono', monospace; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 8px; text-transform: uppercase; }
+        .form-group input {
+            width: 100%; padding: 13px 16px;
+            background: var(--panel); color: var(--text);
+            border: 1px solid var(--border2); border-radius: 8px;
+            font-size: 14px; font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        .form-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+        .form-group input::placeholder { color: var(--muted); }
+        .form-group input:-webkit-autofill,
+        .form-group input:-webkit-autofill:hover,
+        .form-group input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0px 1000px var(--panel) inset !important;
+            -webkit-text-fill-color: var(--text) !important;
+            caret-color: var(--text);
+            border: 1px solid var(--border2);
+        }
+
+        .login-btn {
+            width: 100%; padding: 14px;
+            background: var(--accent); color: #020617;
+            border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 700; letter-spacing: 1px;
+            cursor: pointer; transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .login-btn:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(56,189,248,0.25); }
+        .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .login-error {
+            margin-top: 14px; padding: 10px 14px;
+            background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3);
+            border-radius: 6px; font-size: 12px; color: var(--red);
+            display: none; text-align: center;
+        }
+        .login-signup { text-align: center; margin-top: 20px; font-size: 12px; color: var(--muted); }
+        .login-signup a { color: var(--accent); text-decoration: none; }
+        .login-signup a:hover { text-decoration: underline; }
+
+        /* ── Header ─────────────────────────────────────────────────── */
+        header {
+            background: linear-gradient(180deg, var(--surface) 0%, var(--panel) 100%);
+            padding: 14px 24px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5); gap: 12px;
+        }
+        .logo-section h1 { font-size: 20px; color: var(--accent); letter-spacing: 2px; font-weight: 900; text-shadow: 0 0 12px rgba(56,189,248,0.3); }
+        .logo-section span { font-size: 10px; color: var(--muted); display: block; letter-spacing: 1.5px; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+        .header-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .header-stats-group { display: flex; gap: 8px; align-items: center; }
+        .stat-badge {
+            padding: 6px 12px; border-radius: 6px; font-weight: 700;
+            font-size: 11px; letter-spacing: 0.5px;
+            font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+        }
+        .badge-online { background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+        .badge-offline { background: rgba(244,63,94,0.1); color: var(--red); border: 1px solid rgba(244,63,94,0.3); }
+
+        .mode-toggle-wrap {
+            display: inline-flex; background: var(--panel); border: 1px solid var(--border);
+            border-radius: 6px; padding: 3px; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+        }
+        .mode-toggle-wrap button {
+            padding: 5px 12px; border-radius: 4px; font-weight: 700; border: none; cursor: pointer;
+            transition: all 0.2s; font-family: 'JetBrains Mono', monospace; font-size: 11px; white-space: nowrap;
+        }
+
+        .header-user-group { display: flex; gap: 8px; align-items: center; }
+        .user-pill {
+            padding: 6px 12px; border-radius: 6px; font-size: 11px;
+            background: var(--surface); border: 1px solid var(--border2);
+            color: var(--muted2); display: flex; align-items: center; gap: 6px; white-space: nowrap;
+        }
+        .user-pill span { color: var(--accent); font-weight: 600; }
+        .logout-btn {
+            padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+            background: transparent; border: 1px solid var(--border2); color: var(--muted);
+            cursor: pointer; transition: all 0.2s; font-family: inherit; white-space: nowrap;
+        }
+        .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+        /* ── Latency Tape ───────────────────────────────────────────── */
+        .latency-tape {
+            background: var(--surface); padding: 7px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; gap: 10px; overflow-x: auto; white-space: nowrap;
+            font-size: 11px; color: var(--muted); -webkit-overflow-scrolling: touch;
+        }
+        .latency-tape::-webkit-scrollbar { height: 3px; }
+        .latency-tape::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+        .latency-item {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--panel); padding: 4px 10px;
+            border-radius: 4px; border: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+        }
+        .lat-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+        /* ── Grid ───────────────────────────────────────────────────── */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px; padding: 24px;
+            max-width: 1800px; margin: 0 auto; width: 100%;
+        }
+
+        .farm-wrapper { margin-bottom: 32px; grid-column: 1 / -1; width: 100%; }
+        .farm-sec-header {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--panel); border: 1px solid var(--border); padding: 12px 18px;
+            border-radius: 10px; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace;
+            gap: 10px; flex-wrap: wrap;
+        }
+        .farm-title { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+        .farm-status-pill { font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .farm-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; width: 100%;
+        }
+
+        /* ── Empty State ────────────────────────────────────────────── */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center; padding: 70px 16px;
+            color: var(--muted);
+        }
+        .empty-state .empty-icon { font-size: 44px; margin-bottom: 14px; opacity: 0.4; }
+        .empty-state h3 { font-size: 17px; color: var(--muted2); margin-bottom: 8px; }
+        .empty-state p { font-size: 13px; line-height: 1.6; max-width: 480px; margin: 0 auto; }
+
+        /* ── Node Cards ────────────────────────────────────────────── */
+        .node-card {
+            background: var(--surface); border-radius: 10px;
+            border: 1px solid var(--border); overflow: hidden;
+            min-height: 390px; height: 390px; display: flex; flex-direction: column;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative; width: 100%;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .node-card.live-glow {
+            border-color: rgba(56,189,248,0.4);
+            box-shadow: 0 0 20px rgba(56,189,248,0.1), 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .node-card.live-glow:hover {
+            border-color: rgba(56,189,248,0.7);
+            box-shadow: 0 0 28px rgba(56,189,248,0.2), 0 12px 24px rgba(0,0,0,0.4);
+        }
+        .node-card.offline-card {
+            border-color: rgba(239,68,68,0.35);
+            background: #0b0f19;
+        }
+
+        .node-header {
+            background: var(--panel); padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0; z-index: 10; gap: 8px;
+        }
+        .node-title {
+            font-size: 11px; font-weight: 700; color: var(--text);
+            letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;
+            font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+        }
+        .node-title::before { content: '▪'; color: var(--accent); font-size: 13px; }
+        .node-ip { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+        .header-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .status-tag {
+            font-size: 9px; font-weight: 700; padding: 3px 6px;
+            border-radius: 4px; text-transform: uppercase; border: 1px solid transparent;
+            font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+        }
+        .status-tag.live { background: rgba(16,185,129,0.12); color: var(--green2); border-color: rgba(16,185,129,0.3); }
+        .status-tag.dead { background: rgba(244,63,94,0.12); color: var(--red); border-color: rgba(244,63,94,0.3); }
+        .status-tag.checking { background: rgba(245,158,11,0.12); color: var(--amber); border-color: rgba(245,158,11,0.3); }
+
+        /* Card action buttons */
+        .card-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px; font-weight: 700;
+            padding: 3px 7px; border-radius: 4px;
+            cursor: pointer; transition: all 0.15s;
+            border: 1px solid transparent;
+            display: inline-flex; align-items: center; gap: 3px;
+            white-space: nowrap;
+        }
+        .btn-start {
+            background: #10b981; color: #020617; border: none;
+        }
+        .btn-start:hover { background: #059669; }
+        .btn-stop {
+            background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.4);
+        }
+        .btn-stop:hover { background: rgba(239,68,68,0.35); }
+        .btn-full {
+            background: var(--accent); color: #020617; border: none;
+        }
+        .btn-full:hover { background: var(--accent2); }
+        .btn-del {
+            background: transparent; color: var(--muted); border: 1px solid var(--border2);
+            padding: 3px 6px; font-size: 11px;
+        }
+        .btn-del:hover { color: var(--red); border-color: var(--red); background: rgba(239,68,68,0.1); }
+
+        .node-body {
+            flex-grow: 1; position: relative; background: var(--panel);
+            overflow: hidden; height: calc(100% - 46px);
+        }
+        .node-body-iframe {
+            width: 100%; height: 100%; border: none; display: block;
+            background: #020617;
+        }
+
+        .node-placeholder {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; width: 100%; padding: 20px; text-align: center;
+            position: absolute; inset: 0; z-index: 5;
+        }
+
+        .iframe-controls-bar {
+            position: absolute; bottom: 8px; right: 8px;
+            z-index: 20; display: flex; gap: 6px;
+        }
+        .tab-link {
+            background: rgba(15,23,42,0.85); color: var(--muted2);
+            font-size: 10px; padding: 4px 10px; text-decoration: none;
+            border-radius: 4px; font-family: 'JetBrains Mono', monospace;
+            border: 1px solid var(--border2); backdrop-filter: blur(4px);
+            transition: all 0.2s;
+        }
+        .tab-link:hover { color: var(--accent); border-color: var(--accent); }
+
+        .expand-overlay-btn {
+            background: rgba(6,182,212,0.85); color: #020617;
+            font-size: 10px; font-weight: 700; padding: 4px 10px;
+            border-radius: 4px; font-family: 'JetBrains Mono', monospace;
+            border: none; cursor: pointer; backdrop-filter: blur(4px);
+        }
+        .expand-overlay-btn:hover { background: var(--accent); }
+
+        /* ── Fullscreen Overlay ────────────────────────────────────── */
+        .fullscreen-overlay {
+            display: none; position: fixed; inset: 0;
+            background: var(--panel); z-index: 10000;
+            flex-direction: column;
+        }
+        .fullscreen-header {
+            background: var(--surface); padding: 12px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border); gap: 10px;
+        }
+        .fullscreen-body { flex-grow: 1; position: relative; }
+
+        /* ── Hold-to-Delete Ring Animation ──────────────────────────── */
+        .hold-ring-wrap {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            pointer-events: none; z-index: 999; opacity: 0; transition: opacity 0.15s;
+        }
+        .hold-ring-wrap.visible { opacity: 1; }
+        .hold-ring-svg { width: 80px; height: 80px; transform: rotate(-90deg); }
+        .hold-ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 4; }
+        .hold-ring-fill {
+            fill: none; stroke: #ef4444; stroke-width: 4;
+            stroke-dasharray: 220; stroke-dashoffset: 220;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.05s linear;
+        }
+        .hold-ring-label {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            font-size: 10px; font-weight: 700; color: #ef4444;
+            font-family: 'JetBrains Mono', monospace; letter-spacing: 1px;
+            text-align: center; white-space: nowrap;
+        }
+
+        /* ── Delete Confirm Modal ───────────────────────────────────── */
+        #deleteModal {
+            display: none; position: fixed; inset: 0; z-index: 999999;
+            background: rgba(2,6,23,0.92); align-items: center; justify-content: center;
+            padding: 16px;
+        }
+        #deleteModal.open { display: flex; }
+        .delete-modal-box {
+            background: linear-gradient(145deg, #0f172a, #070d1a);
+            border: 1px solid rgba(239,68,68,0.5); border-radius: 14px;
+            padding: 32px 28px; max-width: 400px; width: 100%;
+            text-align: center; box-shadow: 0 0 40px rgba(239,68,68,0.15);
+            animation: modalPop 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes modalPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .delete-modal-icon { font-size: 40px; margin-bottom: 14px; }
+        .delete-modal-title { font-size: 16px; font-weight: 900; color: #ef4444; letter-spacing: 1px; margin-bottom: 8px; }
+        .delete-modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; }
+        .delete-modal-name {
+            font-size: 13px; color: var(--text); font-weight: 700; font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 18px; padding: 10px 16px; background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.2); border-radius: 6px; word-break: break-all;
+        }
+        .delete-modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .del-yes-btn {
+            padding: 11px 22px; background: #ef4444; color: #fff; border: none;
+            border-radius: 8px; font-weight: 700; font-size: 12px; letter-spacing: 1px;
+            cursor: pointer; font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s;
+        }
+        .del-yes-btn:hover { background: #dc2626; transform: translateY(-1px); }
+        .del-no-btn {
+            padding: 11px 22px; background: transparent; color: var(--muted);
+            border: 1px solid var(--border2); border-radius: 8px;
+            font-weight: 700; font-size: 12px; letter-spacing: 1px;
+            cursor: pointer; font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s;
+        }
+        .del-no-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* ── Payment Lock ──────────────────────────────────────────── */
+        .lock-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(2,6,23,0.97);
+            z-index: 99999; justify-content: center; align-items: center; padding: 16px;
+        }
+        .lock-box {
+            background: linear-gradient(135deg, #1e1b4b, var(--surface));
+            padding: 40px 30px; border-radius: 14px;
+            border: 2px solid var(--red2); text-align: center;
+            max-width: 480px; width: 100%; box-shadow: 0 0 50px rgba(239,68,68,0.2);
+        }
+        .lock-box h2 { color: var(--red); margin-bottom: 14px; font-size: 22px; font-weight: 900; }
+        .lock-box p { color: var(--muted2); margin-bottom: 24px; line-height: 1.7; font-size: 13px; }
+        .whatsapp-btn {
+            background: #22c55e; color: #fff; padding: 13px 24px;
+            font-weight: 700; font-size: 13px; border-radius: 8px;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 16px rgba(34,197,94,0.3); transition: all 0.2s;
+        }
+        .whatsapp-btn:hover { background: #16a34a; transform: translateY(-1px); }
+
+        /* ── Footer Ticker ─────────────────────────────────────────── */
+        footer {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: var(--panel); border-top: 1px solid var(--border);
+            padding: 8px 0; overflow: hidden; z-index: 90;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+        }
+        .marquee { display: flex; white-space: nowrap; animation: marquee 30s linear infinite; }
+        .ticker-item { margin-right: 50px; font-size: 11.5px; letter-spacing: 1px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .up { color: var(--green); } .down { color: var(--red); }
+        @keyframes marquee { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+
+        .refresh-badge {
+            font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+            padding: 4px 8px; border-radius: 4px; background: var(--panel); border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ══════════════════════════════════════════════════════════════
+           RESPONSIVE MOBILE & TABLET MEDIA QUERIES
+           ══════════════════════════════════════════════════════════════ */
+        @media (max-width: 900px) {
+            header {
+                flex-direction: column; align-items: stretch; padding: 12px 16px; gap: 10px;
+            }
+            .logo-section { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .header-right { width: 100%; justify-content: space-between; gap: 8px; }
+            .grid-container { padding: 16px; gap: 16px; }
+            .farm-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        }
+
+        @media (max-width: 640px) {
+            body { padding-bottom: 75px; }
+            #loginScreen { padding: 14px; }
+            .login-card { padding: 28px 20px; width: 100%; border-radius: 12px; }
+            .login-logo h1 { font-size: 20px; }
+            .login-btn { padding: 12px; font-size: 13px; }
+
+            header { padding: 10px 12px; gap: 8px; }
+            .logo-section h1 { font-size: 16px; letter-spacing: 1.5px; }
+            .logo-section span { font-size: 8.5px; letter-spacing: 1px; }
+
+            .header-right {
+                display: flex; flex-direction: column; gap: 8px; width: 100%; align-items: stretch;
+            }
+            .header-stats-group {
+                display: flex; width: 100%; justify-content: space-between; gap: 6px;
+            }
+            .stat-badge { flex: 1; text-align: center; font-size: 10px; padding: 5px 6px; }
+            .refresh-badge { display: none; }
+
+            .mode-toggle-wrap {
+                width: 100%; display: flex;
+            }
+            .mode-toggle-wrap button {
+                flex: 1; text-align: center; padding: 7px 4px; font-size: 10.5px;
+            }
+
+            .header-user-group {
+                display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px;
+            }
+            .user-pill { flex: 1; font-size: 10px; padding: 5px 8px; overflow: hidden; text-overflow: ellipsis; }
+            .logout-btn { padding: 5px 12px; font-size: 10px; }
+
+            .latency-tape { padding: 6px 10px; font-size: 10px; gap: 8px; }
+            .latency-item { padding: 3px 8px; }
+
+            .grid-container { padding: 10px; gap: 12px; }
+            .farm-wrapper { margin-bottom: 24px; }
+            .farm-sec-header { padding: 8px 12px; flex-direction: column; align-items: flex-start; gap: 6px; }
+            .farm-title { font-size: 11.5px; }
+            .farm-status-pill { font-size: 9px; padding: 3px 8px; }
+
+            .farm-grid {
+                grid-template-columns: 1fr !important;
+                gap: 12px;
+            }
+
+            .node-card {
+                height: 360px; min-height: 360px; border-radius: 8px;
+            }
+            .node-header { padding: 7px 10px; gap: 4px; }
+            .node-title { font-size: 10px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+            .node-ip { font-size: 9px; }
+            .status-tag { font-size: 8px; padding: 2px 4px; }
+            .card-btn { font-size: 8.5px; padding: 3px 5px; gap: 2px; }
+            .btn-del { padding: 2px 5px; font-size: 10px; }
+
+            .delete-modal-box { padding: 24px 18px; width: 100%; }
+            .delete-modal-title { font-size: 15px; }
+            .del-yes-btn, .del-no-btn { padding: 9px 16px; font-size: 11px; }
+
+            .fullscreen-header { padding: 10px 12px; }
+            .fullscreen-header h2 { font-size: 12px !important; }
+            .fullscreen-header button { font-size: 10px !important; padding: 4px 8px !important; }
+
+            footer { padding: 6px 0; }
+            .ticker-item { font-size: 10px; margin-right: 30px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ───────────────────────────────────────────────── -->
+<div id="loginScreen" style="display:flex;">
+    <div class="login-card">
+        <div class="login-logo">
+            <h1>MONKGO</h1>
+            <span>NETWORK COMMAND CENTER</span>
+        </div>
+
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="text" id="loginEmail" placeholder="you@example.com" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="off">
+        </div>
+
+        <button class="login-btn" id="loginBtn" onclick="handleLogin()">
+            ▶ ACCESS COMMAND CENTER
+        </button>
+
+        <div class="login-error" id="loginError"></div>
+
+        <div class="login-signup">
+            Don't have an account? <a href="signup.html">Sign up free</a>
+        </div>
+    </div>
+</div>
+
+<!-- ── MAIN DASHBOARD ─────────────────────────────────────────────── -->
+<div id="mainContent" style="display:none;">
+    <header>
+        <div class="logo-section">
+            <h1>MONKGO</h1>
+            <span class="mono">MINER OPERATIONS SYSTEM • CORE COMMAND CONTROL</span>
+        </div>
+        <div class="header-right">
+            <div class="header-stats-group">
+                <div class="stat-badge badge-online">● ACTIVE: <span id="onlineCount">0</span></div>
+                <div class="stat-badge badge-offline">● FAULT: <span id="offlineCount">0</span></div>
+            </div>
+
+            <div class="mode-toggle-wrap">
+                <button id="modeAllBtn" onclick="setTunnelMode('all')" style="background:var(--accent); color:#020617;">⚡ CONNECT ALL</button>
+                <button id="modeManualBtn" onclick="setTunnelMode('manual')" style="background:transparent; color:var(--muted);">🔘 MANUAL</button>
+            </div>
+
+            <div class="header-user-group">
+                <div class="user-pill">👤 <span id="userEmailDisplay">—</span></div>
+                <div class="refresh-badge" id="refreshBadge">⟳ —</div>
+                <button class="logout-btn" onclick="handleLogout()">LOGOUT</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="latency-tape" id="latencyTape"></div>
+    <div class="grid-container" id="gridContainer"></div>
+</div>
+
+<!-- ── FULLSCREEN LIVE CONSOLE OVERLAY ────────────────────────────── -->
+<div class="fullscreen-overlay" id="fullscreenOverlay" style="display:none; position:fixed; inset:0; background:#020617; z-index:9999; flex-direction:column;">
+    <div class="fullscreen-header" style="display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:var(--panel); border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span style="color:var(--green); font-size:14px;">●</span>
+            <h2 id="modalNodeTitle" style="color:var(--accent); font-size:14px; letter-spacing:1px; font-family:'JetBrains Mono',monospace; margin:0;">
+                REMOTE CORE CONSOLE INTERFACE
+            </h2>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <a id="modalExternalLink" class="tab-link" href="#" target="_blank" rel="noopener" style="padding:6px 14px; background:rgba(56,189,248,0.15); color:var(--accent); border:1px solid var(--accent);">↗ OPEN IN NEW TAB</a>
+            <button onclick="closeNodeConsole()" style="padding:6px 16px; background:#ef4444; color:#ffffff; font-weight:bold; border:none; border-radius:6px; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:12px;">✖ CLOSE CONSOLE</button>
+        </div>
+    </div>
+    <div class="fullscreen-body" style="position:relative; flex:1; width:100%; background:#020617;">
+        <div id="modalLoadingSpinner" style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:absolute; inset:0; background:#020617; z-index:10;">
+            <div style="font-size:36px; color:var(--accent);">⚡</div>
+            <div style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:bold; margin-top:12px;">ESTABLISHING SECURE CONSOLE BRIDGE...</div>
+            <div style="color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:6px;">Connecting to miner hardware...</div>
+        </div>
+        <iframe id="fullscreenIframe" src="" style="width:100%; height:100%; border:none; opacity:0; transition:opacity 0.3s;" onload="onConsoleIframeLoaded()"></iframe>
+    </div>
+</div>
+
+<!-- ── PAYMENT LOCK ───────────────────────────────────────────────── -->
+<div class="lock-overlay" id="paymentLockScreen">
+    <div class="lock-box">
+        <h2>🔒 SYSTEM ACCESS LOCKOUT</h2>
+        <p>Aapka remote tracking service module expire ho gaya hai. Service activate rakhne ke liye network owner se sampark karein.</p>
+        <a href="https://wa.me/91XXXXXXXXXX?text=MonkGo%20dashboard%20renew%20karna%20hai" target="_blank" class="whatsapp-btn">
+            ⚡ SECURE PAY & RE-ACTIVATE
+        </a>
+    </div>
+</div>
+
+<!-- ── DELETE CONFIRM MODAL ───────────────────────────────────────── -->
+<div id="deleteModal">
+    <div class="delete-modal-box">
+        <div class="delete-modal-icon">🗑️</div>
+        <div class="delete-modal-title">DELETE MINER NODE?</div>
+        <div class="delete-modal-sub">This will permanently remove:</div>
+        <div class="delete-modal-name" id="deleteModalNodeName">—</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:22px;line-height:1.5;">Bridge will be stopped. Node will re-register<br>if MonkGo PC Client is still running on LAN.</div>
+        <div class="delete-modal-btns">
+            <button class="del-no-btn" onclick="cancelDeleteModal()">✕ CANCEL</button>
+            <button class="del-yes-btn" id="delConfirmBtn" onclick="confirmDeleteNode()">🗑 YES, DELETE</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── FOOTER TICKER ──────────────────────────────────────────────── -->
+<footer>
+    <div class="marquee" id="tickerMarquee">
+        <div class="ticker-item">BTC/USDT: <span class="up">$67,420 ▲</span></div>
+        <div class="ticker-item">ETH/USDT: <span class="up">$3,540 ▲</span></div>
+        <div class="ticker-item">LTC/USDT: <span class="down">$84.20 ▼</span></div>
+        <div class="ticker-item">DOGE/USDT: <span class="up">$0.15 ▲</span></div>
+        <div class="ticker-item">HASH STREAM: <span class="up">● OPTIMAL</span></div>
+        <div class="ticker-item">BTC/USDT: <span class="up">$67,420 ▲</span></div>
+        <div class="ticker-item">ETH/USDT: <span class="up">$3,540 ▲</span></div>
+    </div>
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// ⚙️ CONFIGURATION
+// ════════════════════════════════════════════════════════════════
+const SUPABASE_URL  = "https://qsujmqgaxrtqnrbawfup.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzdWptcWdheHJ0cW5yYmF3ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjEzNjMsImV4cCI6MjEwMjEzNzM2M30.KQvaaL_-bZgwUW4pUxqCsQC0ZhGWnWnLDfvHDYDVwB8";
+
+const REFRESH_INTERVAL = 5_000;
+
+// ════════════════════════════════════════════════════════════════
+// 🔑 AUTH STATE
+// ════════════════════════════════════════════════════════════════
+let _session = null;
+
+function supaHeaders(auth = false) {
+    const h = { "apikey": SUPABASE_ANON, "Content-Type": "application/json" };
+    if (auth && _session) h["Authorization"] = `Bearer ${_session.access_token}`;
+    return h;
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🔓 LOGIN
+// ════════════════════════════════════════════════════════════════
+async function handleLogin() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    const btn      = document.getElementById('loginBtn');
+    
+    if (!email || !password) { showLoginError("Please enter email and password."); return; }
+
+    btn.disabled = true;
+    btn.textContent = "AUTHENTICATING...";
+    document.getElementById('loginError').style.display = 'none';
+
+    try {
+        const authResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { "apikey": SUPABASE_ANON, "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        const authData = await authResp.json();
+        if (!authResp.ok) throw new Error(authData.error_description || "Login failed.");
+
+        const access_token = authData.access_token;
+        const user_id      = authData.user.id;
+        const profResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user_id}&select=*`, {
+            headers: { "apikey": SUPABASE_ANON, "Authorization": `Bearer ${access_token}` }
+        });
+        const profiles = await profResp.json();
+        const profile = profiles[0] || {};
+
+        _session = { access_token, user_id, email, expiry_date: profile.expiry_date };
+
+        btn.textContent = "✓ ENTERING COMMAND CENTER...";
+
+        setTimeout(() => {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('userEmailDisplay').textContent = email;
+            initDashboard();
+        }, 600);
+
+    } catch (err) {
+        showLoginError(err.message || "An unexpected error occurred.");
+        btn.disabled = false;
+        btn.textContent = "ACCESS COMMAND CENTER";
+    }
+}
+
+function showLoginError(msg) {
+    const errEl = document.getElementById('loginError');
+    errEl.textContent = "⚠️ " + msg;
+    errEl.style.display = 'block';
+}
+
+async function handleLogout() {
+    if (_session) {
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+                method: 'PATCH',
+                headers: supaHeaders(true),
+                body: JSON.stringify({ viewer_last_seen: null })
+            });
+        } catch(e) {}
+    }
+    _session = null;
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginBtn').disabled = false;
+    document.getElementById('loginBtn').textContent = "ACCESS COMMAND CENTER";
+}
+
+// ════════════════════════════════════════════════════════════════
+// 📊 DASHBOARD ENGINE
+// ════════════════════════════════════════════════════════════════
+let _currentMode = 'all';
+const _manuallyRequestedSet = new Set(); // Tracks node_names explicitly requested in manual mode
+
+async function syncSavedTunnelMode() {
+    if (!_session) return;
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}&select=tunnel_mode`, { headers: supaHeaders(true) });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data && data[0] && data[0].tunnel_mode) {
+                _currentMode = data[0].tunnel_mode;
+                updateModeUI(_currentMode);
+            }
+        }
+    } catch(e) { console.error("[MODE] Sync error:", e); }
+}
+
+function updateModeUI(mode) {
+    const allBtn    = document.getElementById('modeAllBtn');
+    const manualBtn = document.getElementById('modeManualBtn');
+    if (!allBtn || !manualBtn) return;
+    if (mode === 'all') {
+        allBtn.style.background = 'var(--accent)';
+        allBtn.style.color = '#020617';
+        manualBtn.style.background = 'transparent';
+        manualBtn.style.color = 'var(--muted)';
+    } else {
+        manualBtn.style.background = 'var(--amber)';
+        manualBtn.style.color = '#020617';
+        allBtn.style.background = 'transparent';
+        allBtn.style.color = 'var(--muted)';
+    }
+}
+
+async function setTunnelMode(mode) {
+    if (_currentMode === mode) return;
+
+    _currentMode = mode;
+    updateModeUI(mode);
+
+    if (mode === 'manual') {
+        // Clear all manual requests — all boxes will show MANUAL MODE STANDBY
+        _manuallyRequestedSet.clear();
+    }
+
+    // Instantly re-render all boxes with new mode
+    if (_session) {
+        // Optimistically update UI immediately
+        loadNodes();
+
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+                method: 'PATCH', headers: supaHeaders(true),
+                body: JSON.stringify({ tunnel_mode: mode })
+            });
+
+            if (mode === 'manual') {
+                await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}`, {
+                    method: 'PATCH', headers: supaHeaders(true),
+                    body: JSON.stringify({ tunnel_requested: false, tunnel_url: null })
+                });
+            } else {
+                // ALL mode: fast-poll every 1.5s until all tunnels are live
+                let pollCount = 0;
+                const fastPoll = setInterval(async () => {
+                    pollCount++;
+                    await loadNodes();
+                    if (pollCount >= 10) clearInterval(fastPoll);
+                }, 1500);
+            }
+        } catch (e) { console.error("[MODE] Error setting mode:", e); }
+    }
+}
+
+function openNodeConsole(nodeName, minerIp, tunnelUrl, ev) {
+    if (ev) ev.stopPropagation();
+    if (!tunnelUrl) return;
+
+    document.getElementById('modalNodeTitle').textContent = `${nodeName} (${minerIp}) — LIVE CONTROL CONSOLE`;
+    document.getElementById('modalExternalLink').href = tunnelUrl;
+
+    const spinner = document.getElementById('modalLoadingSpinner');
+    const iframe  = document.getElementById('fullscreenIframe');
+
+    if (spinner && iframe) {
+        spinner.style.display = 'flex';
+        iframe.style.opacity = '0';
+        iframe.src = tunnelUrl;
+    }
+
+    const overlay = document.getElementById('fullscreenOverlay');
+    if (overlay) overlay.style.display = 'flex';
+}
+
+function onConsoleIframeLoaded() {
+    const spinner = document.getElementById('modalLoadingSpinner');
+    const iframe  = document.getElementById('fullscreenIframe');
+    if (spinner && iframe) {
+        spinner.style.display = 'none';
+        iframe.style.opacity = '1';
+    }
+}
+
+function closeNodeConsole() {
+    const overlay = document.getElementById('fullscreenOverlay');
+    const iframe  = document.getElementById('fullscreenIframe');
+    if (overlay && iframe) {
+        overlay.style.display = 'none';
+        iframe.src = '';
+    }
+}
+
+async function requestSingleTunnel(nodeId, minerIp, ev) {
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    if (!_session) return;
+
+    _manuallyRequestedSet.add(nodeId);
+
+    // Instantly update UI of this specific card to show LOADING SCREEN
+    const card = document.getElementById(_makeSafeId(nodeId));
+    if (card) {
+        const iframe      = card.querySelector('.node-body-iframe');
+        const placeholder = card.querySelector('.node-placeholder');
+        const controlsBar = card.querySelector('.iframe-controls-bar');
+        const btnsSlot    = card.querySelector('.action-btns-slot');
+
+        if (iframe) {
+            iframe.style.display = 'none';
+            iframe.removeAttribute('data-loaded-src');
+            iframe.src = 'about:blank';
+        }
+        if (controlsBar) controlsBar.style.display = 'none';
+        if (placeholder) {
+            placeholder.style.display = 'flex';
+            placeholder.innerHTML = `
+                <div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:12px;"></div>
+                <div style="color:var(--amber);font-weight:700;font-size:12px;letter-spacing:1px;font-family:'JetBrains Mono',monospace;">ESTABLISHING BRIDGE...</div>
+                <div style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;margin-top:4px;">${minerIp} — Asking MonkGo PC Client ⚡</div>`;
+        }
+        if (btnsSlot) {
+            btnsSlot.innerHTML = `
+                <button class="card-btn" style="background:rgba(245,158,11,0.2);color:var(--amber);border:1px solid var(--amber);cursor:pointer;" title="Starting bridge...">⏳ STARTING</button>
+                <button class="card-btn btn-stop" onclick="stopSingleBridge('${nodeId}',event)" title="Stop bridge">⏹ STOP</button>
+                <button class="card-btn btn-del" onclick="showDeleteModal('${nodeId}','${nodeId} (${minerIp})',event)" title="Delete miner">🗑️</button>`;
+        }
+    }
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&node_name=eq.${encodeURIComponent(nodeId)}`, {
+            method: 'PATCH', headers: supaHeaders(true),
+            body: JSON.stringify({ tunnel_requested: true })
+        });
+
+        // Fast poll every 1s until this miner gets its tunnel_url
+        let pollCount = 0;
+        const poll = setInterval(async () => {
+            pollCount++;
+            await loadNodes();
+            const checkCard = document.getElementById(_makeSafeId(nodeId));
+            if ((checkCard && checkCard.dataset.tunnelUrl) || pollCount >= 25) {
+                clearInterval(poll);
+            }
+        }, 1000);
+    } catch (e) {
+        console.error("[BRIDGE] Request error:", e);
+    }
+}
+
+async function stopSingleBridge(nodeId, ev) {
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    if (!_session) return;
+
+    _manuallyRequestedSet.delete(nodeId);
+
+    // Instantly update UI of this specific card to show MANUAL MODE STANDBY
+    const card = document.getElementById(_makeSafeId(nodeId));
+    if (card) {
+        const iframe      = card.querySelector('.node-body-iframe');
+        const placeholder = card.querySelector('.node-placeholder');
+        const controlsBar = card.querySelector('.iframe-controls-bar');
+        const btnsSlot    = card.querySelector('.action-btns-slot');
+        const minerIp     = card.dataset.minerIp || '';
+
+        if (iframe) {
+            iframe.style.display = 'none';
+            iframe.removeAttribute('data-loaded-src');
+            iframe.src = 'about:blank';
+        }
+        if (controlsBar) controlsBar.style.display = 'none';
+        if (placeholder) {
+            placeholder.style.display = 'flex';
+            placeholder.innerHTML = `
+                <div style="font-size:36px;margin-bottom:8px;">🔘</div>
+                <div style="color:var(--amber);font-weight:700;font-size:12px;letter-spacing:1px;font-family:'JetBrains Mono',monospace;">MANUAL MODE — STANDBY</div>
+                <div style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;margin-top:2px;">${minerIp}</div>
+                <button onclick="requestSingleTunnel('${nodeId}','${minerIp}',event)" class="card-btn btn-start" style="margin-top:12px;padding:8px 20px;font-size:11px;border-radius:6px;">⚡ START BRIDGE</button>`;
+        }
+        if (btnsSlot) {
+            btnsSlot.innerHTML = `
+                <button class="card-btn btn-start" onclick="requestSingleTunnel('${nodeId}','${minerIp}',event)" title="Start bridge">⚡ START</button>
+                <button class="card-btn btn-stop" onclick="stopSingleBridge('${nodeId}',event)" title="Stop bridge">⏹ STOP</button>
+                <button class="card-btn btn-del" onclick="showDeleteModal('${nodeId}','${nodeId} (${minerIp})',event)" title="Delete miner">🗑️</button>`;
+        }
+        card.className = 'node-card';
+        card.dataset.tunnelUrl = '';
+    }
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&node_name=eq.${encodeURIComponent(nodeId)}`, {
+            method: 'PATCH', headers: supaHeaders(true),
+            body: JSON.stringify({ tunnel_requested: false, tunnel_url: null })
+        });
+        setTimeout(loadNodes, 400);
+    } catch (e) {
+        console.error("[BRIDGE] Stop error:", e);
+    }
+}
+
+async function sendViewerHeartbeat() {
+    if (!_session) return;
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+            method: 'PATCH',
+            headers: supaHeaders(true),
+            body: JSON.stringify({ viewer_last_seen: new Date().toISOString() })
+        });
+    } catch (e) {
+        console.error("[VIEWER] Heartbeat error:", e);
+    }
+}
+
+function initDashboard() {
+    sendViewerHeartbeat();
+    syncSavedTunnelMode();
+    setInterval(sendViewerHeartbeat, 10_000);
+    loadNodes();
+    setInterval(loadNodes, REFRESH_INTERVAL);
+    checkExpiry();
+}
+
+function checkExpiry() {
+    if (!_session || !_session.expiry_date) return;
+    const today  = new Date();
+    const expiry = new Date(_session.expiry_date);
+    if (today >= expiry) {
+        document.getElementById('mainContent').classList.add('blur-effect');
+        document.getElementById('paymentLockScreen').style.display = 'flex';
+    }
+}
+
+async function loadNodes() {
+    if (!_session) return;
+    document.getElementById('refreshBadge').textContent = `⟳ ${new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'})}`;
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&select=*&order=node_name.asc`, { headers: supaHeaders(true) });
+        if (!resp.ok) throw new Error("Fetch failed.");
+        renderNodes(await resp.json());
+    } catch (err) { console.error("[DASHBOARD] Load error:", err); }
+}
+
+function getFarmName(nodeName) {
+    if (!nodeName) return "FARM 1";
+    if (nodeName.includes(" NODE ")) return nodeName.split(" NODE ")[0].trim();
+    return "FARM 1";
+}
+
+function _makeSafeId(n) {
+    return 'nc_' + n.replace(/[^a-zA-Z0-9]/g,'_');
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🖥️ IN-PLACE RENDERING (ZERO BLINK ARCHITECTURE)
+// ════════════════════════════════════════════════════════════════
+function renderNodes(nodes) {
+    const container = document.getElementById('gridContainer');
+    const tape      = document.getElementById('latencyTape');
+    // Generous 60s window to avoid heartbeat flicker
+    const sixtySecAgo = new Date(Date.now() - 60 * 1000);
+
+    const onlineCount = nodes.filter(n => n.status === 'online' && n.last_seen && new Date(n.last_seen) >= sixtySecAgo).length;
+    document.getElementById('onlineCount').textContent = onlineCount;
+    document.getElementById('offlineCount').textContent = nodes.length - onlineCount;
+
+    // ── Latency Tape ─────────────────────────────────────────
+    tape.innerHTML = '';
+    nodes.forEach(node => {
+        const isOnline = node.status === 'online' && node.last_seen && new Date(node.last_seen) >= sixtySecAgo;
+        const el = document.createElement('div');
+        el.className = 'latency-item';
+        el.innerHTML = isOnline
+            ? `<span class="lat-dot" style="background:var(--green)"></span><span style="color:var(--text)">${node.node_name}</span>: <span style="color:var(--green2)">ONLINE</span>`
+            : `<span class="lat-dot" style="background:var(--red)"></span>${node.node_name}: <span style="color:#ef4444;font-weight:bold;">OFFLINE</span>`;
+        tape.appendChild(el);
+    });
+
+    // ── Empty State ──────────────────────────────────────────
+    if (!nodes.length) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">⛏️</div><h3>No Miners Discovered Yet</h3><p>Run <strong>MonkGo.exe</strong> on the Windows PC connected to your mining network.<br>Miners will automatically appear here once discovered.</p></div>`;
+        return;
+    }
+
+    // Clean empty state if nodes now exist
+    const emptyEl = container.querySelector('.empty-state');
+    if (emptyEl) emptyEl.remove();
+
+    // ── Group by Farm ────────────────────────────────────────
+    const farmGroups = {};
+    nodes.forEach(node => {
+        const fn = getFarmName(node.node_name);
+        if (!farmGroups[fn]) farmGroups[fn] = [];
+        farmGroups[fn].push(node);
+    });
+
+    const liveFarmKeys  = new Set(Object.keys(farmGroups).map(fn => fn.replace(/[^a-zA-Z0-9]/g,'_')));
+    const liveNodeNames = new Set(nodes.map(n => n.node_name));
+
+    // Remove stale farms
+    container.querySelectorAll('[data-farm-wrapper]').forEach(fw => {
+        if (!liveFarmKeys.has(fw.dataset.farmWrapper)) fw.remove();
+    });
+
+    // ── Update or Insert Farms & Cards ────────────────────────
+    Object.keys(farmGroups).sort().forEach(farmName => {
+        const farmNodes       = farmGroups[farmName];
+        const farmActiveCount = farmNodes.filter(n => n.status === 'online' && n.last_seen && new Date(n.last_seen) >= sixtySecAgo).length;
+        const farmSafeKey     = farmName.replace(/[^a-zA-Z0-9]/g,'_');
+
+        let fw = container.querySelector(`[data-farm-wrapper="${farmSafeKey}"]`);
+        let farmGrid;
+        if (!fw) {
+            fw = document.createElement('div');
+            fw.className = 'farm-wrapper';
+            fw.dataset.farmWrapper = farmSafeKey;
+            fw.innerHTML = `
+                <div class="farm-sec-header">
+                    <div class="farm-title">⚡ ${farmName} PC CLIENT</div>
+                    <div class="farm-status-pill"></div>
+                </div>
+                <div class="farm-grid"></div>`;
+            container.appendChild(fw);
+        }
+
+        // Update farm status pill in-place
+        const pill = fw.querySelector('.farm-status-pill');
+        if (pill) {
+            if (farmActiveCount > 0) {
+                pill.style.cssText = 'background:rgba(16,185,129,0.15);color:var(--green2);border:1px solid rgba(16,185,129,0.3);';
+                pill.textContent = `● ONLINE (${farmActiveCount} ACTIVE MINER${farmActiveCount > 1 ? 'S' : ''})`;
+            } else {
+                pill.style.cssText = 'background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);';
+                pill.textContent = `● OFFLINE / 0 ACTIVE`;
+            }
+        }
+
+        farmGrid = fw.querySelector('.farm-grid');
+
+        // ── Render / Update Each Card In-Place ────────────────
+        farmNodes.forEach(node => {
+            const isOnline    = node.status === 'online' && node.last_seen && new Date(node.last_seen) >= sixtySecAgo;
+            const isRequested = (_currentMode === 'all') ? true : _manuallyRequestedSet.has(node.node_name);
+            // CRITICAL: In manual mode, NEVER show live bridge unless specifically requested in _manuallyRequestedSet!
+            const hasBridge   = isOnline && !!node.tunnel_url && isRequested;
+            const cardId      = _makeSafeId(node.node_name);
+
+            let card = document.getElementById(cardId);
+
+            if (!card) {
+                // First-time card creation
+                card = document.createElement('div');
+                card.id = cardId;
+                card.className = 'node-card';
+                card.dataset.nodeName = node.node_name;
+                card.dataset.minerIp  = node.miner_ip || '';
+
+                card.innerHTML = `
+                    <div class="node-header">
+                        <div>
+                            <div class="node-title">${node.node_name}</div>
+                            <div class="node-ip">${node.miner_ip || 'IP Unknown'}</div>
+                        </div>
+                        <div class="header-actions">
+                            <span class="status-tag">ONLINE</span>
+                            <div class="action-btns-slot" style="display:flex;gap:4px;align-items:center;"></div>
+                        </div>
+                    </div>
+                    <div class="node-body">
+                        <div class="node-placeholder"></div>
+                        <iframe class="node-body-iframe" src="about:blank" style="display:none;" loading="lazy"></iframe>
+                        <div class="iframe-controls-bar" style="display:none;">
+                            <button class="expand-overlay-btn" title="Open Fullscreen Console">⛶ EXPAND</button>
+                            <a class="tab-link" href="#" target="_blank" rel="noopener">↗ NEW TAB</a>
+                        </div>
+                    </div>`;
+
+                farmGrid.appendChild(card);
+
+                // Setup persistent event listeners on new card
+                attachHoldToDelete(card, node.node_name, `${node.node_name} (${node.miner_ip || ''})`);
+
+                // Card body click for fullscreen (ignores button/link clicks)
+                card.querySelector('.node-body').addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
+                    if (card.dataset.tunnelUrl) {
+                        openNodeConsole(card.dataset.nodeName, card.dataset.minerIp, card.dataset.tunnelUrl, e);
+                    }
+                });
+
+                card.querySelector('.expand-overlay-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (card.dataset.tunnelUrl) {
+                        openNodeConsole(card.dataset.nodeName, card.dataset.minerIp, card.dataset.tunnelUrl, e);
+                    }
+                });
+            }
+
+            // Always update dataset
+            card.dataset.nodeName  = node.node_name;
+            card.dataset.minerIp   = node.miner_ip || '';
+            card.dataset.tunnelUrl = (hasBridge ? node.tunnel_url : '');
+
+            // Update card glow & styling
+            if (hasBridge) {
+                card.className = 'node-card live-glow';
+                card.style.cursor = 'pointer';
+            } else if (!isOnline) {
+                card.className = 'node-card offline-card';
+                card.style.cursor = 'default';
+            } else {
+                card.className = 'node-card';
+                card.style.cursor = 'default';
+            }
+
+            // Update Header Information
+            const titleEl = card.querySelector('.node-title');
+            if (titleEl && titleEl.textContent !== node.node_name) titleEl.textContent = node.node_name;
+            const ipEl = card.querySelector('.node-ip');
+            if (ipEl && ipEl.textContent !== (node.miner_ip || 'IP Unknown')) ipEl.textContent = node.miner_ip || 'IP Unknown';
+
+            // Update Status Tag
+            const tagEl = card.querySelector('.status-tag');
+            if (tagEl) {
+                if (isOnline) {
+                    tagEl.className = 'status-tag live';
+                    tagEl.textContent = hasBridge ? 'LIVE' : 'ONLINE';
+                } else {
+                    tagEl.className = 'status-tag dead';
+                    tagEl.textContent = 'OFFLINE';
+                }
+            }
+
+            // Update Header Action Buttons (Always provide both START and STOP + FULL + DEL)
+            const btnsSlot = card.querySelector('.action-btns-slot');
+            if (btnsSlot) {
+                let btnsHtml = '';
+
+                // START button is always available to trigger or restart tunnel
+                if (isRequested && !hasBridge) {
+                    btnsHtml += `<button class="card-btn" style="background:rgba(245,158,11,0.2);color:var(--amber);border:1px solid var(--amber);cursor:pointer;" onclick="requestSingleTunnel('${node.node_name}','${node.miner_ip}',event)" title="Re-send start request">⏳ STARTING</button>`;
+                } else {
+                    btnsHtml += `<button class="card-btn btn-start" onclick="requestSingleTunnel('${node.node_name}','${node.miner_ip}',event)" title="Start bridge for this miner">⚡ START</button>`;
+                }
+
+                // STOP button is always available to stop tunnel
+                btnsHtml += `<button class="card-btn btn-stop" onclick="stopSingleBridge('${node.node_name}',event)" title="Stop bridge for this miner">⏹ STOP</button>`;
+
+                // FULLSCREEN button (active if bridge is live)
+                if (hasBridge) {
+                    btnsHtml += `<button class="card-btn btn-full" onclick="openNodeConsole('${node.node_name}','${node.miner_ip}','${node.tunnel_url}',event)" title="Open fullscreen console">⛶ FULL</button>`;
+                }
+
+                // Delete button is ALWAYS visible on every card
+                btnsHtml += `<button class="card-btn btn-del" onclick="showDeleteModal('${node.node_name}','${node.node_name} (${node.miner_ip || ''})',event)" title="Delete miner node">🗑️</button>`;
+
+                if (btnsSlot.dataset.stateKey !== `${isOnline}_${hasBridge}_${isRequested}_${_currentMode}`) {
+                    btnsSlot.innerHTML = btnsHtml;
+                    btnsSlot.dataset.stateKey = `${isOnline}_${hasBridge}_${isRequested}_${_currentMode}`;
+                }
+            }
+
+            // ── In-Place Iframe & Body Management (ZERO BLINK) ──
+            const iframe      = card.querySelector('.node-body-iframe');
+            const placeholder = card.querySelector('.node-placeholder');
+            const controlsBar = card.querySelector('.iframe-controls-bar');
+            const tabLink     = card.querySelector('.tab-link');
+
+            if (hasBridge) {
+                // Show iframe, hide placeholder
+                placeholder.style.display = 'none';
+                controlsBar.style.display = 'flex';
+                tabLink.href = node.tunnel_url;
+
+                if (iframe.style.display !== 'block') {
+                    iframe.style.display = 'block';
+                }
+
+                // CRITICAL: Only assign src if it actually changed! Never re-assign if already loaded.
+                if (iframe.getAttribute('data-loaded-src') !== node.tunnel_url) {
+                    iframe.setAttribute('data-loaded-src', node.tunnel_url);
+                    iframe.src = node.tunnel_url;
+                }
+            } else {
+                // Hide iframe
+                iframe.style.display = 'none';
+                controlsBar.style.display = 'none';
+                placeholder.style.display = 'flex';
+
+                if (iframe.getAttribute('data-loaded-src')) {
+                    iframe.removeAttribute('data-loaded-src');
+                    iframe.src = 'about:blank';
+                }
+
+                // Update placeholder content based on status
+                if (!isOnline) {
+                    placeholder.innerHTML = `
+                        <div style="font-size:38px;color:#ef4444;opacity:0.85;margin-bottom:8px;">🔌</div>
+                        <div style="font-size:12px;font-weight:700;color:#ef4444;letter-spacing:1px;font-family:'JetBrains Mono',monospace;">MINER OFFLINE</div>
+                        <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:4px;">No heartbeat from PC client</div>`;
+                } else if (_currentMode === 'all' && !hasBridge) {
+                    placeholder.innerHTML = `
+                        <div style="width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:12px;"></div>
+                        <div style="color:var(--accent);font-weight:700;font-size:11px;letter-spacing:1px;font-family:'JetBrains Mono',monospace;">ESTABLISHING BRIDGE...</div>
+                        <div style="color:var(--muted);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:4px;">${node.miner_ip || ''} — Connecting all miners ⚡</div>`;
+                } else if (isRequested && !hasBridge) {
+                    placeholder.innerHTML = `
+                        <div style="width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:12px;"></div>
+                        <div style="color:var(--amber);font-weight:700;font-size:11px;letter-spacing:1px;font-family:'JetBrains Mono',monospace;">ESTABLISHING BRIDGE...</div>
+                        <div style="color:var(--muted);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:4px;">${node.miner_ip || ''} — Waiting for MonkGo PC client ⏱</div>`;
+                } else {
+                    // MANUAL MODE STANDBY
+                    placeholder.innerHTML = `
+                        <div style="font-size:36px;margin-bottom:8px;">🔘</div>
+                        <div style="color:var(--amber);font-weight:700;font-size:12px;letter-spacing:1px;font-family:'JetBrains Mono',monospace;">MANUAL MODE — STANDBY</div>
+                        <div style="color:var(--muted);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:2px;">${node.miner_ip || ''}</div>
+                        <button onclick="requestSingleTunnel('${node.node_name}','${node.miner_ip}',event)" class="card-btn btn-start" style="margin-top:12px;padding:8px 20px;font-size:11px;border-radius:6px;">⚡ START BRIDGE</button>`;
+                }
+            }
+        });
+
+        // Remove stale cards from grid
+        farmGrid.querySelectorAll('[id^="nc_"]').forEach(cardEl => {
+            const name = cardEl.dataset.nodeName;
+            if (!liveNodeNames.has(name)) {
+                cardEl.remove();
+            }
+        });
+    });
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🗑️ HOLD-TO-DELETE & DIRECT DELETE
+// ════════════════════════════════════════════════════════════════
+let _deleteTargetNodeId   = null;
+
+function attachHoldToDelete(card, nodeId, nodeDisplayName) {
+    let elapsed = 0;
+    let rafId   = null;
+    const HOLD_MS = 3000;
+    const CIRCUMFERENCE = 2 * Math.PI * 35;
+
+    let ringWrap = card.querySelector('.hold-ring-wrap');
+    if (!ringWrap) {
+        ringWrap = document.createElement('div');
+        ringWrap.className = 'hold-ring-wrap';
+        ringWrap.innerHTML = `
+            <svg class="hold-ring-svg" viewBox="0 0 80 80">
+                <circle class="hold-ring-bg" cx="40" cy="40" r="35"/>
+                <circle class="hold-ring-fill" cx="40" cy="40" r="35"
+                    style="stroke-dasharray:${CIRCUMFERENCE}; stroke-dashoffset:${CIRCUMFERENCE};"/>
+            </svg>
+            <div class="hold-ring-label">HOLD<br>TO<br>DEL</div>`;
+        card.appendChild(ringWrap);
+    }
+
+    const ringFill = ringWrap.querySelector('.hold-ring-fill');
+
+    function startHold(e) {
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.tagName === 'IFRAME') return;
+        elapsed = 0;
+        const startTime = performance.now();
+        ringWrap.classList.add('visible');
+
+        function tick(now) {
+            elapsed = now - startTime;
+            const progress = Math.min(elapsed / HOLD_MS, 1);
+            ringFill.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+            if (progress < 1) {
+                rafId = requestAnimationFrame(tick);
+            } else {
+                cancelHold();
+                showDeleteModal(nodeId, nodeDisplayName);
+            }
+        }
+        rafId = requestAnimationFrame(tick);
+    }
+
+    function cancelHold() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        ringWrap.classList.remove('visible');
+        ringFill.style.strokeDashoffset = CIRCUMFERENCE;
+    }
+
+    card.addEventListener('mousedown',  startHold);
+    card.addEventListener('mouseup',    cancelHold);
+    card.addEventListener('mouseleave', cancelHold);
+    card.addEventListener('touchstart', startHold, { passive: true });
+    card.addEventListener('touchend',   cancelHold);
+    card.addEventListener('touchcancel',cancelHold);
+}
+
+function showDeleteModal(nodeId, nodeDisplayName, ev) {
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    _deleteTargetNodeId = nodeId;
+    document.getElementById('deleteModalNodeName').textContent = nodeDisplayName || nodeId;
+    document.getElementById('deleteModal').classList.add('open');
+}
+
+function cancelDeleteModal() {
+    _deleteTargetNodeId = null;
+    document.getElementById('deleteModal').classList.remove('open');
+}
+
+async function confirmDeleteNode() {
+    if (!_session || !_deleteTargetNodeId) return;
+    const nodeId = _deleteTargetNodeId;
+    const btn = document.getElementById('delConfirmBtn');
+    if (btn) { btn.disabled = true; btn.textContent = "DELETING..."; }
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&node_name=eq.${encodeURIComponent(nodeId)}`, {
+            method: 'DELETE',
+            headers: supaHeaders(true)
+        });
+
+        // Instantly remove card from DOM
+        const card = document.getElementById(_makeSafeId(nodeId));
+        if (card) card.remove();
+
+        cancelDeleteModal();
+        loadNodes();
+    } catch(e) {
+        console.error('[DELETE] Error:', e);
+        cancelDeleteModal();
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "🗑 YES, DELETE"; }
+    }
+}
+
+document.getElementById('deleteModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('deleteModal')) cancelDeleteModal();
+});
+
+// Close fullscreen with Escape key
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        closeNodeConsole();
+        cancelDeleteModal();
+    }
+});
+</script>
+</body>
+</html>
