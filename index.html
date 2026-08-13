@@ -1,0 +1,1143 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monk Miner Farm â€” Network Command Center</title>
+    <meta name="description" content="Professional mining farm remote monitoring dashboard. View all your ASIC miners in real-time from anywhere.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* â”€â”€ Reset & Base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg:       #060913;
+            --surface:  #0f172a;
+            --panel:    #020617;
+            --border:   #1e293b;
+            --border2:  #334155;
+            --accent:   #38bdf8;
+            --accent2:  #0ea5e9;
+            --green:    #10b981;
+            --green2:   #34d399;
+            --red:      #f43f5e;
+            --red2:     #ef4444;
+            --amber:    #f59e0b;
+            --text:     #e2e8f0;
+            --muted:    #64748b;
+            --muted2:   #94a3b8;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            padding-bottom: 60px;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .blur-effect { filter: blur(14px); pointer-events: none; user-select: none; }
+
+        /* â”€â”€ Login Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        #loginScreen {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, #1e3a5f 0%, var(--bg) 70%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 99999;
+        }
+        .login-card {
+            background: linear-gradient(145deg, #0f172a, #070d1a);
+            border: 1px solid var(--border2);
+            border-radius: 16px;
+            padding: 50px 44px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(56,189,248,0.08);
+        }
+        .login-logo { text-align: center; margin-bottom: 36px; }
+        .login-logo h1 {
+            font-size: 24px; font-weight: 900; letter-spacing: 3px;
+            color: var(--accent); text-shadow: 0 0 20px rgba(56,189,248,0.35);
+        }
+        .login-logo span { font-size: 11px; color: var(--muted); letter-spacing: 2px; display: block; margin-top: 5px; font-family: 'JetBrains Mono', monospace; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 8px; text-transform: uppercase; }
+        .form-group input {
+            width: 100%; padding: 13px 16px;
+            background: var(--panel); color: var(--text);
+            border: 1px solid var(--border2); border-radius: 8px;
+            font-size: 14px; font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        .form-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,0.1); }
+        .form-group input::placeholder { color: var(--muted); }
+        /* Fix browser autofill overriding dark background */
+        .form-group input:-webkit-autofill,
+        .form-group input:-webkit-autofill:hover,
+        .form-group input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0px 1000px var(--panel) inset !important;
+            -webkit-text-fill-color: var(--text) !important;
+            caret-color: var(--text);
+            border: 1px solid var(--border2);
+        }
+
+        .login-btn {
+            width: 100%; padding: 14px;
+            background: var(--accent); color: #020617;
+            border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 700; letter-spacing: 1px;
+            cursor: pointer; transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .login-btn:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(56,189,248,0.25); }
+        .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .login-error {
+            margin-top: 14px; padding: 10px 14px;
+            background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3);
+            border-radius: 6px; font-size: 12px; color: var(--red);
+            display: none; text-align: center;
+        }
+        .login-signup { text-align: center; margin-top: 20px; font-size: 12px; color: var(--muted); }
+        .login-signup a { color: var(--accent); text-decoration: none; }
+        .login-signup a:hover { text-decoration: underline; }
+
+        /* Key reveal section */
+        .key-reveal {
+            margin-top: 20px; padding: 14px;
+            background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2);
+            border-radius: 8px; display: none;
+        }
+        .key-reveal label { display: block; font-size: 10px; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 6px; text-transform: uppercase; }
+        .key-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px; font-weight: 700; color: var(--accent);
+            letter-spacing: 3px; cursor: pointer; text-align: center;
+        }
+        .key-hint { font-size: 10px; color: var(--muted); text-align: center; margin-top: 4px; }
+
+        /* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        header {
+            background: linear-gradient(180deg, var(--surface) 0%, var(--panel) 100%);
+            padding: 16px 28px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+        }
+        .logo-section h1 { font-size: 20px; color: var(--accent); letter-spacing: 2px; font-weight: 900; text-shadow: 0 0 12px rgba(56,189,248,0.3); }
+        .logo-section span { font-size: 10px; color: var(--muted); display: block; letter-spacing: 1.5px; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+        .header-right { display: flex; gap: 12px; align-items: center; }
+        .stat-badge {
+            padding: 7px 15px; border-radius: 6px; font-weight: 700;
+            font-size: 12px; letter-spacing: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .badge-online { background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+        .badge-offline { background: rgba(244,63,94,0.1); color: var(--red); border: 1px solid rgba(244,63,94,0.3); }
+
+        .user-pill {
+            padding: 7px 14px; border-radius: 6px; font-size: 12px;
+            background: var(--surface); border: 1px solid var(--border2);
+            color: var(--muted2); display: flex; align-items: center; gap: 8px;
+        }
+        .user-pill span { color: var(--accent); font-weight: 600; }
+        .logout-btn {
+            padding: 7px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+            background: transparent; border: 1px solid var(--border2); color: var(--muted);
+            cursor: pointer; transition: all 0.2s; font-family: inherit;
+        }
+        .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+        /* â”€â”€ Latency Tape â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .latency-tape {
+            background: var(--surface); padding: 7px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; gap: 12px; overflow-x: auto; white-space: nowrap;
+            font-size: 11px; color: var(--muted);
+        }
+        .latency-tape::-webkit-scrollbar { height: 3px; }
+        .latency-tape::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+        .latency-item {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--panel); padding: 4px 10px;
+            border-radius: 4px; border: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .lat-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+        /* â”€â”€ Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px; padding: 24px;
+            max-width: 1800px; margin: 0 auto;
+        }
+
+        /* â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center; padding: 80px 20px;
+            color: var(--muted);
+        }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+        .empty-state h3 { font-size: 18px; color: var(--muted2); margin-bottom: 8px; }
+        .empty-state p { font-size: 13px; line-height: 1.6; }
+
+        /* â”€â”€ Tunnel Panel (replaces iframe) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .tunnel-panel {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            height: 100%; gap: 10px; padding: 20px;
+            background: radial-gradient(ellipse at center, rgba(56,189,248,0.05) 0%, transparent 70%);
+        }
+        .tunnel-icon { font-size: 40px; opacity: 0.8; }
+        .tunnel-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 2px;
+            color: var(--green2); font-family: 'JetBrains Mono', monospace;
+        }
+        .tunnel-url {
+            font-size: 11px; color: var(--accent); font-family: 'JetBrains Mono', monospace;
+            max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            background: rgba(56,189,248,0.08); padding: 6px 12px; border-radius: 6px;
+            border: 1px solid rgba(56,189,248,0.2);
+        }
+        .open-btn {
+            margin-top: 8px; padding: 10px 24px;
+            background: var(--accent); color: #020617;
+            font-weight: 700; font-size: 13px; letter-spacing: 1px;
+            border-radius: 8px; text-decoration: none;
+            transition: all 0.2s; display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .open-btn:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(56,189,248,0.3); }
+
+
+        /* â”€â”€ Node Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .node-card {
+            background: var(--surface); border-radius: 10px;
+            border: 1px solid var(--border); overflow: hidden;
+            min-height: 390px; display: flex; flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .node-card.live-glow { border-color: rgba(56,189,248,0.4); box-shadow: 0 0 20px rgba(56,189,248,0.1), 0 8px 16px rgba(0,0,0,0.3); }
+        .node-card.live-glow:hover { transform: translateY(-3px); border-color: rgba(56,189,248,0.7); box-shadow: 0 0 30px rgba(56,189,248,0.2), 0 12px 24px rgba(0,0,0,0.4); }
+        .node-card:not(.live-glow):hover { transform: translateY(-4px); border-color: var(--accent2); }
+        .node-body { flex-grow: 1; position: relative; background: var(--panel); min-height: 0; }
+        .node-body-iframe { width: 100%; height: 100%; min-height: 340px; border: none; display: block; background: #020617; }
+
+        .node-header {
+            background: var(--panel); padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .node-title {
+            font-size: 13px; font-weight: 700; color: var(--text);
+            letter-spacing: 1px; display: flex; align-items: center; gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .node-title::before { content: 'â–ª'; color: var(--accent); font-size: 16px; }
+        .node-ip { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+        .header-actions { display: flex; align-items: center; gap: 8px; }
+        .status-tag {
+            font-size: 10px; font-weight: 700; padding: 3px 8px;
+            border-radius: 4px; text-transform: uppercase; border: 1px solid transparent;
+            font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+        }
+        .status-tag.live { background: rgba(16,185,129,0.1); color: var(--green2); border-color: rgba(16,185,129,0.3); }
+        .status-tag.dead { background: rgba(244,63,94,0.1); color: var(--red); border-color: rgba(244,63,94,0.3); }
+        .status-tag.checking { background: rgba(245,158,11,0.1); color: var(--amber); border-color: rgba(245,158,11,0.3); }
+
+        .action-btn {
+            background: var(--surface); color: var(--accent);
+            border: 1px solid var(--border2); padding: 5px 10px;
+            font-size: 11px; font-weight: 700; border-radius: 4px;
+            cursor: pointer; transition: all 0.2s; font-family: 'JetBrains Mono', monospace;
+        }
+        .action-btn:hover { background: var(--accent); color: var(--panel); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+
+        .node-body { flex-grow: 1; position: relative; background: var(--panel); }
+        iframe { width: 100%; height: 100%; border: none; display: block; }
+
+        /* â”€â”€ Overlay Panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .custom-overlay {
+            position: absolute; inset: 0; background: var(--panel);
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; padding: 25px; text-align: center; z-index: 40;
+        }
+        .loader-ring {
+            width: 42px; height: 42px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            margin-bottom: 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .overlay-text { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .error-icon { font-size: 34px; margin-bottom: 12px; }
+        .error-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: 1px; }
+        .error-desc { font-size: 11px; color: var(--muted); line-height: 1.6; max-width: 230px; }
+
+        /* â”€â”€ Fullscreen Overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .fullscreen-overlay {
+            display: none; position: fixed; inset: 0;
+            background: var(--panel); z-index: 10000;
+            flex-direction: column;
+        }
+        .fullscreen-header {
+            background: var(--surface); padding: 16px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .fullscreen-body { flex-grow: 1; position: relative; }
+
+        /* â”€â”€ Payment Lock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .lock-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(2,6,23,0.97);
+            z-index: 99999; justify-content: center; align-items: center;
+        }
+        .lock-box {
+            background: linear-gradient(135deg, #1e1b4b, var(--surface));
+            padding: 50px 44px; border-radius: 14px;
+            border: 2px solid var(--red2); text-align: center;
+            max-width: 480px; box-shadow: 0 0 50px rgba(239,68,68,0.2);
+        }
+        .lock-box h2 { color: var(--red); margin-bottom: 14px; font-size: 24px; font-weight: 900; }
+        .lock-box p { color: var(--muted2); margin-bottom: 28px; line-height: 1.7; font-size: 13px; }
+        .whatsapp-btn {
+            background: #22c55e; color: #fff; padding: 14px 28px;
+            font-weight: 700; font-size: 14px; border-radius: 8px;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 16px rgba(34,197,94,0.3); transition: all 0.2s;
+        }
+        .whatsapp-btn:hover { background: #16a34a; transform: translateY(-1px); }
+
+        /* â”€â”€ Footer Ticker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        footer {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: var(--panel); border-top: 1px solid var(--border);
+            padding: 10px 0; overflow: hidden; z-index: 90;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+        }
+        .marquee { display: flex; white-space: nowrap; animation: marquee 30s linear infinite; }
+        .ticker-item { margin-right: 55px; font-size: 12px; letter-spacing: 1px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .up { color: var(--green); } .down { color: var(--red); }
+        @keyframes marquee { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+
+        /* â”€â”€ Refresh indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .refresh-badge {
+            font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+            padding: 4px 10px; border-radius: 4px; background: var(--panel); border: 1px solid var(--border);
+        }
+        /* â”€â”€ Hold-to-Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        .hold-ring-wrap {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            pointer-events: none; z-index: 999; opacity: 0; transition: opacity 0.15s;
+        }
+        .hold-ring-wrap.visible { opacity: 1; }
+        .hold-ring-svg { width: 80px; height: 80px; transform: rotate(-90deg); }
+        .hold-ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 4; }
+        .hold-ring-fill {
+            fill: none; stroke: #ef4444; stroke-width: 4;
+            stroke-dasharray: 220; stroke-dashoffset: 220;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.05s linear;
+        }
+        .hold-ring-label {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            font-size: 11px; font-weight: 700; color: #ef4444;
+            font-family: 'JetBrains Mono', monospace; letter-spacing: 1px;
+            text-align: center; white-space: nowrap;
+        }
+        /* Delete confirm modal */
+        #deleteModal {
+            display: none; position: fixed; inset: 0; z-index: 999999;
+            background: rgba(2,6,23,0.92); align-items: center; justify-content: center;
+        }
+        #deleteModal.open { display: flex; }
+        .delete-modal-box {
+            background: linear-gradient(145deg, #0f172a, #070d1a);
+            border: 1px solid rgba(239,68,68,0.5); border-radius: 14px;
+            padding: 36px 40px; max-width: 380px; width: 90%;
+            text-align: center; box-shadow: 0 0 40px rgba(239,68,68,0.15);
+            animation: modalPop 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes modalPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .delete-modal-icon { font-size: 40px; margin-bottom: 14px; }
+        .delete-modal-title { font-size: 16px; font-weight: 900; color: #ef4444; letter-spacing: 1px; margin-bottom: 8px; }
+        .delete-modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; }
+        .delete-modal-name { font-size: 13px; color: var(--text); font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 24px; padding: 8px 16px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 6px; }
+        .delete-modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .del-yes-btn {
+            padding: 11px 28px; background: #ef4444; color: #fff; border: none;
+            border-radius: 8px; font-weight: 700; font-size: 13px; letter-spacing: 1px;
+            cursor: pointer; font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s;
+        }
+        .del-yes-btn:hover { background: #dc2626; transform: translateY(-1px); }
+        .del-no-btn {
+            padding: 11px 28px; background: transparent; color: var(--muted);
+            border: 1px solid var(--border2); border-radius: 8px;
+            font-weight: 700; font-size: 13px; letter-spacing: 1px;
+            cursor: pointer; font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s;
+        }
+        .del-no-btn:hover { border-color: var(--accent); color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<!-- â”€â”€ LOGIN SCREEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div id="loginScreen" style="display:flex;">
+    <div class="login-card">
+        <div class="login-logo">
+            <h1>MONK MINER FARM</h1>
+            <span>NETWORK COMMAND CENTER</span>
+        </div>
+
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="text" id="loginEmail" placeholder="you@example.com" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="off">
+        </div>
+
+        <button class="login-btn" id="loginBtn" onclick="handleLogin()">
+            â–¶ ACCESS COMMAND CENTER
+        </button>
+
+        <div class="login-error" id="loginError"></div>
+
+        <div class="login-signup">
+            Don't have an account? <a href="signup.html">Sign up free</a>
+        </div>
+    </div>
+</div>
+
+<!-- â”€â”€ MAIN DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div id="mainContent" style="display:none;">
+    <header>
+        <div class="logo-section">
+            <h1>MONK MINER FARM</h1>
+            <span class="mono">NETWORK OPERATIONS SYSTEM â€¢ CORE COMMAND CONTROL</span>
+        </div>
+        <div class="header-right">
+            <div class="stat-badge badge-online">â— ACTIVE: <span id="onlineCount">0</span></div>
+            <div class="stat-badge badge-offline">â— FAULT: <span id="offlineCount">0</span></div>
+
+            <div style="display:inline-flex; background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:3px; gap:4px; font-family:'JetBrains Mono',monospace; font-size:11px;">
+                <button id="modeAllBtn" onclick="setTunnelMode('all')" style="padding:5px 12px; border-radius:4px; font-weight:700; border:none; cursor:pointer; background:var(--accent); color:#020617; transition:all 0.2s;">âš¡ CONNECT ALL MINERS</button>
+                <button id="modeManualBtn" onclick="setTunnelMode('manual')" style="padding:5px 12px; border-radius:4px; font-weight:700; border:none; cursor:pointer; background:transparent; color:var(--muted); transition:all 0.2s;">ðŸ”˜ MANUAL CONNECT</button>
+            </div>
+
+            <div class="user-pill">ðŸ‘¤ <span id="userEmailDisplay">â€”</span></div>
+            <div class="refresh-badge" id="refreshBadge">âŸ³ â€”</div>
+            <button class="logout-btn" onclick="handleLogout()">LOGOUT</button>
+        </div>
+    </header>
+
+    <div class="latency-tape" id="latencyTape"></div>
+    <div class="grid-container" id="gridContainer"></div>
+</div>
+
+<!-- â”€â”€ FULLSCREEN LIVE CONSOLE OVERLAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="fullscreen-overlay" id="fullscreenOverlay" style="display:none; position:fixed; inset:0; background:#020617; z-index:9999; flex-direction:column;">
+    <div class="fullscreen-header" style="display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:var(--panel); border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span style="color:var(--green); font-size:14px;">â—</span>
+            <h2 id="modalNodeTitle" style="color:var(--accent); font-size:14px; letter-spacing:1px; font-family:'JetBrains Mono',monospace; margin:0;">
+                REMOTE CORE CONSOLE INTERFACE
+            </h2>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <a id="modalExternalLink" class="action-btn" href="#" target="_blank" rel="noopener" style="padding:6px 14px; text-decoration:none; background:rgba(56,189,248,0.15); color:var(--accent); border:1px solid var(--accent);">â†— OPEN IN NEW TAB</a>
+            <button class="action-btn" onclick="closeNodeConsole()" style="padding:6px 16px; background:#ef4444; color:#ffffff; font-weight:bold; border:none; border-radius:6px; cursor:pointer;">âœ– CLOSE CONSOLE</button>
+        </div>
+    </div>
+    <div class="fullscreen-body" style="position:relative; flex:1; width:100%; background:#020617;">
+        <div id="modalLoadingSpinner" style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:absolute; inset:0; background:#020617; z-index:10;">
+            <div style="font-size:36px; color:var(--accent);">âš¡</div>
+            <div style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:bold; margin-top:12px;">ESTABLISHING SECURE CONSOLE BRIDGE...</div>
+            <div style="color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:6px;">Connecting to miner hardware...</div>
+        </div>
+        <iframe id="fullscreenIframe" src="" style="width:100%; height:100%; border:none; opacity:0; transition:opacity 0.3s;" onload="onConsoleIframeLoaded()"></iframe>
+    </div>
+</div>
+
+<!-- â”€â”€ PAYMENT LOCK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="lock-overlay" id="paymentLockScreen">
+    <div class="lock-box">
+        <h2>ðŸ”’ SYSTEM ACCESS LOCKOUT</h2>
+        <p>Aapka remote tracking service module ka time schedule expire ho gaya hai. Agle operational block register karne ke liye turant network owner se sampark karke bill clear karein.</p>
+        <a href="https://wa.me/91XXXXXXXXXX?text=Atul%20Bhai%20dashboard%20renew%20karna%20hai" target="_blank" class="whatsapp-btn">
+            âš¡ SECURE PAY & RE-ACTIVATE
+        </a>
+    </div>
+</div>
+
+<!-- â”€â”€ DELETE CONFIRM MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div id="deleteModal">
+    <div class="delete-modal-box">
+        <div class="delete-modal-icon">ðŸ—‘ï¸</div>
+        <div class="delete-modal-title">DELETE MINER NODE?</div>
+        <div class="delete-modal-sub">This will permanently remove:</div>
+        <div class="delete-modal-name" id="deleteModalNodeName">â€”</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:22px;">Bridge will be stopped. Miner will re-appear<br>if MonkGo PC Client is still running.</div>
+        <div class="delete-modal-btns">
+            <button class="del-no-btn" onclick="cancelDeleteModal()">âœ• CANCEL</button>
+            <button class="del-yes-btn" onclick="confirmDeleteNode()">ðŸ—‘ YES, DELETE</button>
+        </div>
+    </div>
+</div>
+
+<!-- â”€â”€ FOOTER TICKER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<footer>
+    <div class="marquee" id="tickerMarquee">
+        <div class="ticker-item">BTC/USDT: <span class="up">$67,420 â–²</span></div>
+        <div class="ticker-item">ETH/USDT: <span class="up">$3,540 â–²</span></div>
+        <div class="ticker-item">LTC/USDT: <span class="down">$84.20 â–¼</span></div>
+        <div class="ticker-item">DOGE/USDT: <span class="up">$0.15 â–²</span></div>
+        <div class="ticker-item">HASH STREAM: <span class="up">â— OPTIMAL</span></div>
+        <div class="ticker-item">BTC/USDT: <span class="up">$67,420 â–²</span></div>
+        <div class="ticker-item">ETH/USDT: <span class="up">$3,540 â–²</span></div>
+    </div>
+</footer>
+
+<script>
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// âš™ï¸ CONFIGURATION
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const SUPABASE_URL  = "https://qsujmqgaxrtqnrbawfup.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzdWptcWdheHJ0cW5yYmF3ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjEzNjMsImV4cCI6MjEwMjEzNzM2M30.KQvaaL_-bZgwUW4pUxqCsQC0ZhGWnWnLDfvHDYDVwB8";
+
+// Auto-refresh nodes every 5 seconds for live status
+const REFRESH_INTERVAL = 5_000;
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ” AUTH STATE
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let _session = null;
+
+function supaHeaders(auth = false) {
+    const h = { "apikey": SUPABASE_ANON, "Content-Type": "application/json" };
+    if (auth && _session) h["Authorization"] = `Bearer ${_session.access_token}`;
+    return h;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ” LOGIN
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+async function handleLogin() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    const btn      = document.getElementById('loginBtn');
+    
+    if (!email || !password) { showLoginError("Please enter email and password."); return; }
+
+    btn.disabled = true;
+    btn.textContent = "AUTHENTICATING...";
+    document.getElementById('loginError').style.display = 'none';
+
+    try {
+        const authResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { "apikey": SUPABASE_ANON, "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        const authData = await authResp.json();
+        if (!authResp.ok) throw new Error(authData.error_description || "Login failed.");
+
+        const access_token = authData.access_token;
+        const user_id      = authData.user.id;
+        const profResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user_id}&select=*`, { headers: { "apikey": SUPABASE_ANON, "Authorization": `Bearer ${access_token}` } });
+        const profiles = await profResp.json();
+        const profile = profiles[0];
+
+        _session = { access_token, user_id, email, expiry_date: profile.expiry_date };
+
+        btn.textContent = "âœ“ ENTERING COMMAND CENTER...";
+
+        setTimeout(() => {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('userEmailDisplay').textContent = email;
+            initDashboard();
+        }, 800);
+
+    } catch (err) {
+        showLoginError(err.message || "An unexpected error occurred.");
+        btn.disabled = false;
+        btn.textContent = "ACCESS COMMAND CENTER";
+    }
+}
+
+function showLoginError(msg) {
+    const errEl = document.getElementById('loginError');
+    errEl.textContent = "âš ï¸ " + msg;
+    errEl.style.display = 'block';
+}
+
+async function handleLogout() {
+    if (_session) {
+        try {
+            // Instantly clear viewer status so MonkGo PC client stops tunnels immediately on logout
+            await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+                method: 'PATCH',
+                headers: supaHeaders(true),
+                body: JSON.stringify({ viewer_last_seen: null })
+            });
+        } catch(e) {}
+    }
+    _session = null;
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginBtn').disabled = false;
+    document.getElementById('loginBtn').textContent = "ACCESS COMMAND CENTER";
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ“Š DASHBOARD ENGINE
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let _currentMode = 'all';
+const _cardTunnelMap = new Map(); // node_name â†’ tunnelUrl currently loaded in iframe
+let _stopGraceTimeout = null;
+
+async function syncSavedTunnelMode() {
+    if (!_session) return;
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}&select=tunnel_mode`, { headers: supaHeaders(true) });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data && data[0] && data[0].tunnel_mode) {
+                _currentMode = data[0].tunnel_mode;
+                updateModeUI(_currentMode);
+            }
+        }
+    } catch(e) { console.error("[MODE] Sync error:", e); }
+}
+
+function updateModeUI(mode) {
+    const allBtn    = document.getElementById('modeAllBtn');
+    const manualBtn = document.getElementById('modeManualBtn');
+    if (!allBtn || !manualBtn) return;
+    if (mode === 'all') {
+        allBtn.style.background = 'var(--accent)';
+        allBtn.style.color = '#020617';
+        manualBtn.style.background = 'transparent';
+        manualBtn.style.color = 'var(--muted)';
+    } else {
+        manualBtn.style.background = 'var(--amber)';
+        manualBtn.style.color = '#020617';
+        allBtn.style.background = 'transparent';
+        allBtn.style.color = 'var(--muted)';
+    }
+}
+
+async function setTunnelMode(mode) {
+    if (_currentMode === mode) return;
+
+    // Cancel any pending grace-period stop
+    if (_stopGraceTimeout) { clearTimeout(_stopGraceTimeout); _stopGraceTimeout = null; }
+
+    _currentMode = mode;
+    updateModeUI(mode);
+
+    if (!_session) return;
+    try {
+        // Always save mode immediately â€” EXE reads this every heartbeat
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+            method: 'PATCH', headers: supaHeaders(true),
+            body: JSON.stringify({ tunnel_mode: mode })
+        });
+
+        if (mode === 'manual') {
+            // Grace period: keep showing live iframes for 10s, then stop bridges
+            // EXE knows mode=manual but won't stop until tunnel_requested is cleared
+            _stopGraceTimeout = setTimeout(async () => {
+                _stopGraceTimeout = null;
+                try {
+                    await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}`, {
+                        method: 'PATCH', headers: supaHeaders(true),
+                        body: JSON.stringify({ tunnel_requested: false, tunnel_url: null })
+                    });
+                } catch(e) {}
+                _cardTunnelMap.clear(); // Force full re-render once bridges are cleared
+                loadNodes();
+            }, 10000);
+            // Don't clear loadNodes yet â€” still showing live iframes during grace
+        } else {
+            // ALL mode: EXE starts bridges for all discovered IPs immediately
+            loadNodes();
+        }
+    } catch (e) { console.error("[MODE] Error setting mode:", e); }
+}
+
+
+function openNodeConsole(nodeName, minerIp, tunnelUrl, ev) {
+    if (ev) ev.stopPropagation();
+    if (!tunnelUrl) return;
+
+    document.getElementById('modalNodeTitle').textContent = `${nodeName} (${minerIp}) â€” LIVE CONTROL CONSOLE`;
+    document.getElementById('modalExternalLink').href = tunnelUrl;
+
+    const spinner = document.getElementById('modalLoadingSpinner');
+    const iframe  = document.getElementById('fullscreenIframe');
+
+    if (spinner && iframe) {
+        spinner.style.display = 'flex';
+        iframe.style.opacity = '0';
+        iframe.src = tunnelUrl;
+    }
+
+    const overlay = document.getElementById('fullscreenOverlay');
+    if (overlay) overlay.style.display = 'flex';
+}
+
+function onConsoleIframeLoaded() {
+    const spinner = document.getElementById('modalLoadingSpinner');
+    const iframe  = document.getElementById('fullscreenIframe');
+    if (spinner && iframe) {
+        spinner.style.display = 'none';
+        iframe.style.opacity = '1';
+    }
+}
+
+function closeNodeConsole() {
+    const overlay = document.getElementById('fullscreenOverlay');
+    const iframe  = document.getElementById('fullscreenIframe');
+    if (overlay && iframe) {
+        overlay.style.display = 'none';
+        iframe.src = ''; // Unload to free memory
+    }
+}
+
+async function requestSingleTunnel(nodeId, minerIp, ev) {
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    if (!_session) return;
+    // Cancel any pending grace stop so we don't clear what we just started
+    if (_stopGraceTimeout) { clearTimeout(_stopGraceTimeout); _stopGraceTimeout = null; }
+
+    const btn = ev ? ev.currentTarget || ev.target : null;
+    if (btn) { btn.disabled = true; btn.innerHTML = "â³ CONNECTING..."; btn.style.opacity = "0.7"; }
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&node_name=eq.${encodeURIComponent(nodeId)}`, {
+            method: 'PATCH', headers: supaHeaders(true),
+            body: JSON.stringify({ tunnel_requested: true })
+        });
+        let tries = 0;
+        const poll = setInterval(async () => { tries++; await loadNodes(); if (tries >= 12) clearInterval(poll); }, 5000);
+    } catch (e) {
+        console.error("[BRIDGE] Request error:", e);
+        if (btn) { btn.disabled = false; btn.innerHTML = "âš¡ CONNECT THIS MINER"; btn.style.opacity = "1"; }
+    }
+}
+
+async function stopSingleBridge(nodeId, ev) {
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    if (!_session) return;
+
+    const btn = ev ? ev.currentTarget || ev.target : null;
+    if (btn) { btn.disabled = true; btn.innerHTML = "â³ STOPPING..."; }
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&node_name=eq.${encodeURIComponent(nodeId)}`, {
+            method: 'PATCH', headers: supaHeaders(true),
+            body: JSON.stringify({ tunnel_requested: false, tunnel_url: null })
+        });
+        _cardTunnelMap.delete(nodeId); // Clear tunnel map so card re-renders without iframe
+        setTimeout(loadNodes, 800);
+    } catch (e) {
+        console.error("[BRIDGE] Stop error:", e);
+        if (btn) { btn.disabled = false; btn.innerHTML = "â¹ STOP"; }
+    }
+}
+
+
+async function sendViewerHeartbeat() {
+    if (!_session) return;
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${_session.user_id}`, {
+            method: 'PATCH',
+            headers: supaHeaders(true),
+            body: JSON.stringify({ viewer_last_seen: new Date().toISOString() })
+        });
+    } catch (e) {
+        console.error("[VIEWER] Heartbeat error:", e);
+    }
+}
+
+function initDashboard() {
+    sendViewerHeartbeat();
+    syncSavedTunnelMode(); // Restore user's last saved mode (CONNECT ALL vs MANUAL CONNECT)
+    setInterval(sendViewerHeartbeat, 10_000); // Heartbeat every 10s to keep On-Demand Tunnels active
+    loadNodes();
+    setInterval(loadNodes, REFRESH_INTERVAL);
+    checkExpiry();
+}
+
+function checkExpiry() {
+    if (!_session || !_session.expiry_date) return;
+    const today  = new Date();
+    const expiry = new Date(_session.expiry_date);
+    if (today >= expiry) {
+        document.getElementById('mainContent').classList.add('blur-effect');
+        document.getElementById('paymentLockScreen').style.display = 'flex';
+    }
+}
+
+async function loadNodes() {
+    if (!_session) return;
+    document.getElementById('refreshBadge').textContent = `âŸ³ ${new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'})}`;
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&select=*&order=node_name.asc`, { headers: supaHeaders(true) });
+        if (!resp.ok) throw new Error("Fetch failed.");
+        renderNodes(await resp.json());
+    } catch (err) { console.error("[DASHBOARD] Load error:", err); }
+}
+
+function getFarmName(nodeName) {
+    if (!nodeName) return "FARM 1";
+    if (nodeName.includes(" NODE ")) return nodeName.split(" NODE ")[0].trim();
+    return "FARM 1";
+}
+
+// â”€â”€ Render helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function _sId(n) { return 'nc_' + n.replace(/[^a-zA-Z0-9]/g,'_'); }
+
+function _hBtn(node, hasBridge, ao, isReq) {
+    const s = `font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;cursor:pointer;`;
+    if (!ao) return `<button disabled style="${s}background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.4);cursor:not-allowed;">OFFLINE ðŸ”Œ</button>`;
+    if (hasBridge) return `
+        <button onclick="stopSingleBridge('${node.node_name}',event)"
+            style="${s}background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.4);"
+            onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">â¹ STOP</button>
+        <button onclick="openNodeConsole('${node.node_name}','${node.miner_ip}','${node.tunnel_url}',event)"
+            style="${s}background:var(--accent);color:#020617;border:none;">â›¶ FULL</button>`;
+    if (_currentMode === 'manual' && !isReq) return `<button onclick="requestSingleTunnel('${node.node_name}','${node.miner_ip}',event)" style="${s}background:#10b981;color:#020617;border:none;">âš¡ START</button>`;
+    if (ao) return `<span style="color:var(--amber);font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;">â³ CONNECTING</span>`;
+    return '';
+}
+
+function _bHtml(node, hasBridge, ao, isReq) {
+    if (!ao) return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:220px;gap:10px;padding:20px;text-align:center;background:radial-gradient(ellipse at center,rgba(239,68,68,0.07) 0%,transparent 70%)"><div style="font-size:44px;color:#ef4444;opacity:0.85">ðŸ”Œ</div><div style="font-size:13px;font-weight:700;color:#ef4444;letter-spacing:1px;font-family:'JetBrains Mono',monospace">MINER OFFLINE</div><div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.6">No heartbeat &gt;20 seconds</div></div>`;
+    if (hasBridge) return `<iframe class="node-body-iframe" src="${node.tunnel_url}" loading="lazy" title="${node.node_name}"></iframe><div style="position:absolute;bottom:8px;right:8px;z-index:10"><a href="${node.tunnel_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="background:rgba(15,23,42,0.85);color:var(--muted2);font-size:10px;padding:4px 10px;text-decoration:none;border-radius:4px;font-family:'JetBrains Mono',monospace;border:1px solid var(--border2)">â†— NEW TAB</a></div>`;
+    if (_currentMode==='all') return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:220px;gap:14px;padding:20px;text-align:center;background:radial-gradient(ellipse at center,rgba(56,189,248,0.06) 0%,transparent 70%)"><div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.9s linear infinite"></div><div style="color:var(--accent);font-weight:700;font-size:12px;letter-spacing:1px;font-family:'JetBrains Mono',monospace">ESTABLISHING BRIDGE...</div><div style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace">${node.miner_ip} â€” All Miners Mode</div></div>`;
+    if (isReq) return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:220px;gap:14px;padding:20px;text-align:center;background:radial-gradient(ellipse at center,rgba(245,158,11,0.06) 0%,transparent 70%)"><div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin 0.9s linear infinite"></div><div style="color:var(--amber);font-weight:700;font-size:12px;letter-spacing:1px;font-family:'JetBrains Mono',monospace">BRIDGE REQUESTED...</div><div style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace">${node.miner_ip} â€” Waiting for MonkGo</div></div>`;
+    return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:220px;gap:14px;padding:20px;text-align:center;background:radial-gradient(ellipse at center,rgba(16,185,129,0.05) 0%,transparent 70%)"><div style="font-size:38px">â›ï¸</div><div style="color:var(--green2);font-weight:700;font-size:12px;letter-spacing:1px;font-family:'JetBrains Mono',monospace">MINER ONLINE â€” STANDBY</div><div style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace">${node.miner_ip} â€” No Bridge Active</div><button onclick="requestSingleTunnel('${node.node_name}','${node.miner_ip}',event)" onmouseover="this.style.background='#0ea5e9'" onmouseout="this.style.background='var(--accent)'" style="margin-top:6px;background:var(--accent);color:#020617;font-weight:700;font-size:12px;letter-spacing:1px;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;font-family:'JetBrains Mono',monospace">âš¡ START BRIDGE</button></div>`;
+}
+
+function renderNodes(nodes) {
+    const container = document.getElementById('gridContainer');
+    const tape      = document.getElementById('latencyTape');
+    const twentySecAgo = new Date(Date.now() - 20 * 1000);
+
+    // â”€â”€ Counts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const online = nodes.filter(n => n.status==='online' && n.last_seen && new Date(n.last_seen)>=twentySecAgo).length;
+    document.getElementById('onlineCount').textContent = online;
+    document.getElementById('offlineCount').textContent = nodes.length - online;
+
+    // â”€â”€ Tape â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    tape.innerHTML = '';
+    nodes.forEach(node => {
+        const ao = node.status==='online' && node.last_seen && new Date(node.last_seen)>=twentySecAgo;
+        const el = document.createElement('div');
+        el.className = 'latency-item';
+        el.innerHTML = ao
+            ? `<span class="lat-dot" style="background:var(--green)"></span><span style="color:var(--text)">${node.node_name}</span>: <span style="color:var(--green2)">ONLINE</span>`
+            : `<span class="lat-dot" style="background:var(--red)"></span>${node.node_name}: <span style="color:#ef4444;font-weight:bold;">OFFLINE</span>`;
+        tape.appendChild(el);
+    });
+
+    // â”€â”€ Empty state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    if (!nodes.length) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">â›ï¸</div><h3>No Miners Found Yet</h3><p>Install <strong>MonkGo.exe</strong> on the Windows PC.<br>Miners appear here automatically.</p></div>`;
+        _cardTunnelMap.clear();
+        return;
+    }
+
+    // â”€â”€ Farm groups â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const farmGroups = {};
+    nodes.forEach(node => {
+        const fn = getFarmName(node.node_name);
+        if (!farmGroups[fn]) farmGroups[fn] = [];
+        farmGroups[fn].push(node);
+    });
+    const liveNodeNames = new Set(nodes.map(n => n.node_name));
+    const liveFarmKeys  = new Set(Object.keys(farmGroups));
+
+    // Remove stale farm sections
+    container.querySelectorAll('[data-farm-wrapper]').forEach(fw => {
+        if (!liveFarmKeys.has(fw.dataset.farmWrapper)) fw.remove();
+    });
+    // Remove stale card entries from tunnel map
+    for (const [name] of _cardTunnelMap.entries()) {
+        if (!liveNodeNames.has(name)) {
+            const el = document.getElementById(_sId(name));
+            if (el) el.remove();
+            _cardTunnelMap.delete(name);
+        }
+    }
+
+    // â”€â”€ Build/update farms â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    Object.keys(farmGroups).sort().forEach(farmName => {
+        const farmNodes     = farmGroups[farmName];
+        const farmActiveCount = farmNodes.filter(n => n.status==='online' && n.last_seen && new Date(n.last_seen)>=twentySecAgo).length;
+        const farmSafeKey   = farmName.replace(/[^a-zA-Z0-9]/g,'_');
+
+        // Get or create farm wrapper (persistent â€” never blown away)
+        let fw = container.querySelector(`[data-farm-wrapper="${farmSafeKey}"]`);
+        let farmGrid;
+        if (!fw) {
+            fw = document.createElement('div');
+            fw.dataset.farmWrapper = farmSafeKey;
+            fw.style.cssText = 'margin-bottom:36px; grid-column:1/-1;';
+            const fh = document.createElement('div');
+            fh.className = 'fw-header';
+            fh.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--border);padding:14px 20px;border-radius:10px;margin-bottom:16px;font-family:"JetBrains Mono",monospace;';
+            farmGrid = document.createElement('div');
+            farmGrid.className = 'farm-grid';
+            farmGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;';
+            fw.appendChild(fh);
+            fw.appendChild(farmGrid);
+            container.appendChild(fw);
+        } else {
+            farmGrid = fw.querySelector('.farm-grid');
+        }
+
+        // Always update farm header (just a div - safe to rebuild)
+        fw.querySelector('.fw-header').innerHTML = `
+            <div style="font-size:14px;font-weight:700;color:var(--accent);letter-spacing:1px;">âš¡ ${farmName} PC CLIENT</div>
+            <div style="font-size:11px;font-weight:700;padding:5px 14px;border-radius:6px;text-transform:uppercase;letter-spacing:1px;${farmActiveCount>0?'background:rgba(16,185,129,0.15);color:var(--green2);border:1px solid rgba(16,185,129,0.3);':'background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid rgba(239,68,68,0.4);'}">
+                ${farmActiveCount>0?`â— ONLINE (${farmActiveCount} ACTIVE MINER${farmActiveCount>1?'S':''})`:'â— OFFLINE / 0 MINERS ACTIVE'}
+            </div>`;
+
+        // â”€â”€ Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        farmNodes.forEach(node => {
+            const ao       = node.status==='online' && node.last_seen && new Date(node.last_seen)>=twentySecAgo;
+            const hasBridge= ao && !!node.tunnel_url;
+            const isReq    = !!node.tunnel_requested;
+            const cardId   = _sId(node.node_name);
+
+            // âœ… FAST PATH: iframe card with same tunnel URL â€” update ONLY header, NEVER touch body
+            const cachedUrl = _cardTunnelMap.get(node.node_name);
+            let card = document.getElementById(cardId);
+            if (card && hasBridge && cachedUrl === node.tunnel_url) {
+                const hdr = card.querySelector('.node-header');
+                if (hdr) hdr.innerHTML = `
+                    <div>
+                        <div class="node-title">${node.node_name}</div>
+                        <div class="node-ip">${node.miner_ip||'IP Unknown'}</div>
+                    </div>
+                    <div class="header-actions">
+                        <span class="status-tag live">ONLINE</span>
+                        ${_hBtn(node,hasBridge,ao,isReq)}
+                    </div>`;
+                if (card.parentElement !== farmGrid) farmGrid.appendChild(card);
+                return; // iframe untouched â€” zero blink
+            }
+
+            // â”€â”€ Full card create/rebuild â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const isNew = !card;
+            if (isNew) {
+                card = document.createElement('div');
+                card.id = cardId;
+                card.dataset.nodeName = node.node_name;
+                card.dataset.minerIp  = node.miner_ip || '';
+                farmGrid.appendChild(card);
+                // Attach hold-to-delete once (check prevents duplicate rings)
+                attachHoldToDelete(card, node.node_name, `${node.node_name}`);
+            }
+
+            card.className = `node-card ${ao ? 'live-glow' : ''}`;
+            card.style.cssText = '';
+            if (!ao)       card.style.cssText = 'border-color:rgba(239,68,68,0.4);box-shadow:0 0 15px rgba(239,68,68,0.12),0 8px 16px rgba(0,0,0,0.3);background:#0f131d;cursor:not-allowed;';
+            if (hasBridge) { card.style.cursor='pointer'; card.dataset.tunnelUrl=node.tunnel_url; }
+            card.dataset.nodeName = node.node_name;
+            card.dataset.minerIp  = node.miner_ip || '';
+
+            card.innerHTML = `
+                <div class="node-header">
+                    <div>
+                        <div class="node-title">${node.node_name}</div>
+                        <div class="node-ip">${node.miner_ip||'IP Unknown'}</div>
+                    </div>
+                    <div class="header-actions">
+                        <span class="status-tag ${ao?'live':'dead'}">${ao?'ONLINE':'OFFLINE'}</span>
+                        ${_hBtn(node,hasBridge,ao,isReq)}
+                    </div>
+                </div>
+                <div class="node-body" style="${hasBridge?'padding:0;overflow:hidden;position:relative;':''}">${_bHtml(node,hasBridge,ao,isReq)}</div>`;
+
+            // Re-attach hold ring (innerHTML wipes it)
+            if (!card.querySelector('.hold-ring-wrap')) {
+                attachHoldToDelete(card, node.node_name, node.node_name);
+            }
+
+            if (hasBridge) {
+                _cardTunnelMap.set(node.node_name, node.tunnel_url);
+                card.dataset.tunnelUrl = node.tunnel_url;
+                // Remove old click listener by cloning, then add new one
+                const newCard = card.cloneNode(true);
+                card.replaceWith(newCard);
+                card = newCard;
+                card.addEventListener('click', e => {
+                    if (e.target.tagName==='BUTTON'||e.target.tagName==='A'||e.target.tagName==='IFRAME') return;
+                    openNodeConsole(card.dataset.nodeName, card.dataset.minerIp, card.dataset.tunnelUrl, e);
+                });
+                // Re-attach hold ring after clone
+                if (!card.querySelector('.hold-ring-wrap')) {
+                    attachHoldToDelete(card, node.node_name, node.node_name);
+                }
+            } else {
+                _cardTunnelMap.delete(node.node_name);
+            }
+        });
+
+        // Remove stale cards from this farmGrid
+        farmGrid.querySelectorAll('[id^="nc_"]').forEach(cardEl => {
+            const name = cardEl.dataset.nodeName;
+            if (!name || !farmNodes.find(n=>n.node_name===name)) {
+                cardEl.remove();
+                if (name) _cardTunnelMap.delete(name);
+            }
+        });
+    });
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ—‘ï¸ HOLD-TO-DELETE
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let _deleteTargetNodeId   = null;
+let _deleteTargetNodeName = null;
+
+function attachHoldToDelete(card, nodeId, nodeName) {
+    let holdTimer   = null;
+    let elapsed     = 0;
+    let rafId       = null;
+    const HOLD_MS   = 3000;
+    const CIRCUMFERENCE = 2 * Math.PI * 35; // r=35
+
+    // Build the ring overlay (hidden by default inside card)
+    const ringWrap = document.createElement('div');
+    ringWrap.className = 'hold-ring-wrap';
+    ringWrap.innerHTML = `
+        <svg class="hold-ring-svg" viewBox="0 0 80 80">
+            <circle class="hold-ring-bg" cx="40" cy="40" r="35"/>
+            <circle class="hold-ring-fill" cx="40" cy="40" r="35"
+                style="stroke-dasharray:${CIRCUMFERENCE}; stroke-dashoffset:${CIRCUMFERENCE};"/>
+        </svg>
+        <div class="hold-ring-label">HOLD<br>TO<br>DEL</div>`;
+    card.style.position = 'relative';
+    card.appendChild(ringWrap);
+
+    const ringFill = ringWrap.querySelector('.hold-ring-fill');
+
+    function startHold(e) {
+        // Don't trigger if clicking buttons or links
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.tagName === 'IFRAME') return;
+        elapsed = 0;
+        const startTime = performance.now();
+        ringWrap.classList.add('visible');
+
+        function tick(now) {
+            elapsed = now - startTime;
+            const progress = Math.min(elapsed / HOLD_MS, 1);
+            ringFill.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+            if (progress < 1) {
+                rafId = requestAnimationFrame(tick);
+            } else {
+                cancelHold();
+                showDeleteModal(nodeId, nodeName);
+            }
+        }
+        rafId = requestAnimationFrame(tick);
+    }
+
+    function cancelHold() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        ringWrap.classList.remove('visible');
+        ringFill.style.strokeDashoffset = CIRCUMFERENCE;
+    }
+
+    card.addEventListener('mousedown',  startHold);
+    card.addEventListener('mouseup',    cancelHold);
+    card.addEventListener('mouseleave', cancelHold);
+    card.addEventListener('touchstart', startHold, { passive: true });
+    card.addEventListener('touchend',   cancelHold);
+    card.addEventListener('touchcancel',cancelHold);
+}
+
+function showDeleteModal(nodeId, nodeName) {
+    _deleteTargetNodeId   = nodeId;
+    _deleteTargetNodeName = nodeName;
+    document.getElementById('deleteModalNodeName').textContent = nodeName;
+    document.getElementById('deleteModal').classList.add('open');
+}
+
+function cancelDeleteModal() {
+    _deleteTargetNodeId   = null;
+    _deleteTargetNodeName = null;
+    document.getElementById('deleteModal').classList.remove('open');
+}
+
+async function confirmDeleteNode() {
+    if (!_session || !_deleteTargetNodeId) return;
+    const nodeId = _deleteTargetNodeId;
+    cancelDeleteModal();
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/nodes?user_id=eq.${_session.user_id}&node_name=eq.${encodeURIComponent(nodeId)}`, {
+            method: 'DELETE',
+            headers: supaHeaders(true)
+        });
+        _cardTunnelMap.delete(nodeId); // Remove from cache immediately
+        loadNodes(); // Refresh grid
+    } catch(e) {
+        console.error('[DELETE] Error:', e);
+    }
+}
+
+// Close delete modal on backdrop click
+document.getElementById('deleteModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('deleteModal')) cancelDeleteModal();
+});
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ”² FULLSCREEN
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function openNode(url, nodeName, isOffline) {
+    document.getElementById('modalNodeTitle').textContent = `REMOTE NODE // ${nodeName}`;
+    const iframe = document.getElementById('fullscreenIframe');
+    const errScr = document.getElementById('modalErrorScreen');
+
+    if (isOffline || !url) {
+        iframe.style.display = 'none';
+        errScr.style.display = 'flex';
+    } else {
+        errScr.style.display = 'none';
+        iframe.style.display = 'block';
+        iframe.src = url;
+    }
+    document.getElementById('fullscreenOverlay').style.display = 'flex';
+}
+
+function closeNode() {
+    document.getElementById('fullscreenOverlay').style.display = 'none';
+    document.getElementById('fullscreenIframe').src = '';
+}
+
+// Close fullscreen with Escape key
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNode(); });
+</script>
+</body>
+</html>
