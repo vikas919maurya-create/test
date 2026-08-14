@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MonkGo — Military-grade encrypted remote miner monitoring. Monitor your entire ASIC farm from anywhere. No open ports. No exposure. One secure account.">
+    <title>MonkGo | Secure Remote Miner Farm Monitoring</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#FFD700">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase for auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+/* ============================================
+   MONKGO — Premium Golden & Black Theme
+   ============================================ */
+:root {
+    --gold-400: #FFD700; --gold-500: #F5C518; --gold-600: #C9A84C;
+    --gold-light: #FFE680; --gold-dark: #B8960C;
+    --bg-primary: #0A0A0A; --bg-secondary: #111111;
+    --bg-card: rgba(20,20,20,0.75); --bg-card-hover: rgba(28,28,28,0.9);
+    --text-primary: #F5F5F5; --text-secondary: #A0A0A0; --text-muted: #666;
+    --border-color: rgba(255,215,0,0.12); --border-hover: rgba(255,215,0,0.3);
+    --green: #10B981; --red: #EF4444;
+    --gold-gradient: linear-gradient(135deg,#FFD700 0%,#F5C518 40%,#C9A84C 100%);
+    --gold-gradient-text: linear-gradient(135deg,#FFD700 0%,#FFED8A 30%,#FFD700 60%,#C9A84C 100%);
+    --font-primary: 'Outfit', sans-serif;
+    --font-secondary: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --nav-height: 72px;
+    --tf: 0.2s cubic-bezier(0.4,0,0.2,1);
+    --ts: 0.4s cubic-bezier(0.4,0,0.2,1);
+    --rmd: 12px; --rlg: 16px; --rxl: 24px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-height)+16px);}
+body{font-family:var(--font-secondary);background:var(--bg-primary);color:var(--text-primary);line-height:1.7;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4{font-family:var(--font-primary);font-weight:700;line-height:1.2;}
+a{text-decoration:none;color:inherit;}
+img{max-width:100%;display:block;}
+button{border:none;background:none;cursor:pointer;font-family:var(--font-secondary);color:var(--text-primary);}
+ul{list-style:none;}
+.gold-text{background:var(--gold-gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.glass-card{background:var(--bg-card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border-color);border-radius:var(--rlg);transition:all var(--ts);}
+.glass-card:hover{background:var(--bg-card-hover);border-color:var(--border-hover);box-shadow:0 0 32px rgba(255,215,0,0.08);transform:translateY(-4px);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:10px;padding:13px 28px;font-family:var(--font-primary);font-weight:600;font-size:0.93rem;border-radius:var(--rmd);transition:all var(--ts);cursor:pointer;white-space:nowrap;}
+.btn-primary{background:var(--gold-gradient);color:#0A0A0A;font-weight:700;box-shadow:0 4px 20px rgba(255,215,0,0.22);}
+.btn-primary:hover{box-shadow:0 6px 36px rgba(255,215,0,0.45);transform:translateY(-2px);}
+.btn-outline{border:2px solid var(--gold-400);color:var(--gold-400);background:transparent;}
+.btn-outline:hover{background:rgba(255,215,0,0.07);transform:translateY(-2px);}
+.btn-lg{padding:17px 40px;font-size:1.02rem;}
+.btn-full{width:100%;justify-content:center;}
+.btn-google{background:#fff;color:#1a1a1a;font-weight:700;border:none;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.25);}
+.btn-google:hover{box-shadow:0 4px 24px rgba(0,0,0,0.35);transform:translateY(-2px);}
+
+/* NAVBAR */
+.navbar{position:fixed;top:0;left:0;right:0;height:var(--nav-height);z-index:1000;background:rgba(10,10,10,0.82);backdrop-filter:blur(20px);border-bottom:1px solid var(--border-color);transition:all var(--ts);}
+.navbar.scrolled{background:rgba(10,10,10,0.97);box-shadow:0 4px 28px rgba(0,0,0,0.5);}
+.nav-container{max-width:1200px;margin:0 auto;padding:0 32px;height:100%;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo-text{font-family:var(--font-primary);font-size:1.7rem;font-weight:900;letter-spacing:3px;background:var(--gold-gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav-logo-sub{font-family:var(--font-mono);font-size:0.55rem;letter-spacing:2.5px;color:var(--text-muted);display:block;margin-top:-5px;}
+.nav-links{display:flex;align-items:center;gap:4px;}
+.nav-link{padding:7px 15px;font-family:var(--font-primary);font-size:0.87rem;font-weight:500;color:var(--text-secondary);border-radius:8px;transition:all var(--tf);}
+.nav-link:hover{color:var(--gold-400);background:rgba(255,215,0,0.05);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-signup{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:8px;font-family:var(--font-primary);font-weight:600;font-size:0.83rem;color:var(--gold-400);transition:all var(--ts);}
+.nav-signup:hover{background:rgba(255,215,0,0.15);border-color:var(--gold-400);}
+.nav-cta{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:var(--gold-gradient);border-radius:8px;color:#0A0A0A;font-family:var(--font-primary);font-weight:700;font-size:0.83rem;transition:all var(--ts);}
+.nav-cta:hover{box-shadow:0 4px 18px rgba(255,215,0,0.4);transform:translateY(-1px);}
+.hamburger{display:none;flex-direction:column;gap:5px;padding:8px;}
+.hamburger span{width:22px;height:2px;background:var(--gold-400);border-radius:2px;transition:all 0.2s;}
+.hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px);}
+.hamburger.active span:nth-child(2){opacity:0;}
+.hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px);}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;padding:120px 32px 80px;}
+.hero-bg{position:absolute;inset:0;pointer-events:none;}
+.hero-orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:0.28;}
+.hero-orb-1{width:600px;height:600px;background:radial-gradient(circle,rgba(255,215,0,0.2) 0%,transparent 70%);top:-15%;right:-10%;animation:float 14s ease-in-out infinite;}
+.hero-orb-2{width:500px;height:500px;background:radial-gradient(circle,rgba(201,168,76,0.16) 0%,transparent 70%);bottom:-15%;left:-12%;animation:float 18s ease-in-out infinite reverse;}
+.hero-orb-3{width:300px;height:300px;background:radial-gradient(circle,rgba(255,215,0,0.1) 0%,transparent 70%);top:50%;left:50%;animation:float 11s ease-in-out infinite 2s;}
+@keyframes float{0%,100%{transform:translate(0,0);}33%{transform:translate(18px,-28px);}66%{transform:translate(-14px,18px);}}
+.hero-content{position:relative;z-index:1;max-width:860px;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 18px;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.18);border-radius:100px;font-size:0.78rem;font-weight:600;color:var(--gold-400);margin-bottom:24px;font-family:var(--font-mono);letter-spacing:1.5px;animation:fadeUp 0.7s ease-out;}
+.hero-logo{font-family:var(--font-primary);font-size:clamp(4.5rem,13vw,9rem);font-weight:900;letter-spacing:5px;background:var(--gold-gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:8px;filter:drop-shadow(0 0 45px rgba(255,215,0,0.3));animation:fadeUp 0.7s ease-out 0.05s backwards;}
+.hero-tagline{font-family:var(--font-mono);font-size:0.7rem;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase;margin-bottom:22px;animation:fadeUp 0.7s ease-out 0.1s backwards;}
+.hero-title{font-size:clamp(1.4rem,3vw,2.2rem);font-weight:800;letter-spacing:-0.02em;margin-bottom:18px;line-height:1.35;animation:fadeUp 0.7s ease-out 0.15s backwards;}
+.hero-subtitle{font-size:1.02rem;color:var(--text-secondary);max-width:620px;margin:0 auto 36px;line-height:1.8;animation:fadeUp 0.7s ease-out 0.2s backwards;}
+.hero-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;animation:fadeUp 0.7s ease-out 0.25s backwards;}
+.hero-stats{display:flex;align-items:center;justify-content:center;gap:44px;margin-top:56px;animation:fadeUp 0.7s ease-out 0.3s backwards;}
+.stat-item{text-align:center;}
+.stat-number{display:block;font-family:var(--font-primary);font-size:1.9rem;font-weight:800;background:var(--gold-gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stat-label{font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;font-family:var(--font-mono);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+/* SECTION COMMONS */
+.section{padding:100px 0;position:relative;}
+.sc{max-width:1200px;margin:0 auto;padding:0 32px;}
+.sh{text-align:center;margin-bottom:60px;}
+.stag{display:inline-block;padding:5px 16px;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.14);border-radius:100px;font-size:0.75rem;font-weight:600;color:var(--gold-500);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;font-family:var(--font-mono);}
+.section-title{font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:800;margin-bottom:14px;letter-spacing:-0.02em;}
+.section-desc{font-size:0.97rem;color:var(--text-secondary);max-width:540px;margin:0 auto;line-height:1.7;}
+
+/* HOW IT WORKS */
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.step-card{padding:36px 26px;text-align:center;}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:14px;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.18);font-family:var(--font-primary);font-size:1.2rem;font-weight:900;color:var(--gold-400);margin-bottom:18px;}
+.step-card h3{font-size:1.05rem;font-weight:700;margin-bottom:9px;}
+.step-card p{font-size:0.86rem;color:var(--text-secondary);line-height:1.7;}
+
+/* SECURITY SECTION */
+.security-section{background:var(--bg-primary);}
+.security-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.security-text h2{font-size:clamp(1.8rem,3vw,2.6rem);font-weight:900;margin-bottom:16px;}
+.security-text p{font-size:0.97rem;color:var(--text-secondary);line-height:1.85;margin-bottom:20px;}
+.security-badges{display:flex;flex-direction:column;gap:14px;margin-top:28px;}
+.sec-badge{display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:var(--rmd);}
+.sec-badge-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(16,185,129,0.1);font-size:1.1rem;flex-shrink:0;}
+.sec-badge-text strong{display:block;font-size:0.88rem;font-weight:700;color:var(--text-primary);margin-bottom:2px;}
+.sec-badge-text span{font-size:0.78rem;color:var(--text-secondary);}
+.security-visual{background:linear-gradient(135deg,rgba(255,215,0,0.04) 0%,rgba(10,10,10,0.95) 100%);border:1px solid var(--border-color);border-radius:var(--rxl);padding:36px 28px;}
+.sec-vis-title{font-family:var(--font-mono);font-size:0.72rem;letter-spacing:2px;color:var(--gold-500);margin-bottom:22px;text-align:center;}
+.sec-flow{display:flex;flex-direction:column;gap:10px;}
+.sec-flow-row{display:flex;align-items:center;gap:10px;}
+.sec-flow-box{flex:1;padding:10px 14px;border-radius:8px;font-family:var(--font-mono);font-size:0.72rem;text-align:center;font-weight:700;}
+.sec-flow-box.miner{background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.2);color:var(--gold-400);}
+.sec-flow-box.cloud{background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);color:var(--green);}
+.sec-flow-box.dashboard{background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);color:var(--gold-500);}
+.sec-flow-arrow{color:var(--green);font-size:0.8rem;font-family:var(--font-mono);}
+.sec-flow-label{font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);text-align:center;padding:4px 8px;background:rgba(16,185,129,0.05);border-radius:4px;border:1px solid rgba(16,185,129,0.1);}
+.sec-lock-badge{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding:10px;background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.12);border-radius:8px;}
+.sec-lock-badge span{font-family:var(--font-mono);font-size:0.7rem;color:var(--gold-500);}
+
+/* SIGNUP SECTION */
+.auth-section{background:var(--bg-secondary);}
+.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;max-width:960px;margin:0 auto;}
+.auth-info h3{font-size:1.5rem;font-weight:800;margin-bottom:14px;}
+.auth-info p{font-size:0.9rem;color:var(--text-secondary);line-height:1.8;margin-bottom:18px;}
+.auth-perks{display:flex;flex-direction:column;gap:10px;margin-top:18px;}
+.auth-perk{display:flex;align-items:center;gap:10px;font-size:0.87rem;color:var(--text-secondary);}
+.auth-perk .tick{width:20px;height:20px;border-radius:50%;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:var(--green);flex-shrink:0;}
+.auth-card{background:rgba(14,14,14,0.95);border:1px solid var(--border-color);border-radius:var(--rxl);padding:32px 28px;}
+/* Tabs */
+.auth-tabs{display:flex;background:rgba(255,255,255,0.03);border-radius:10px;padding:4px;margin-bottom:24px;border:1px solid var(--border-color);}
+.auth-tab{flex:1;padding:9px;text-align:center;font-family:var(--font-primary);font-size:0.85rem;font-weight:600;color:var(--text-muted);border-radius:8px;cursor:pointer;transition:all var(--tf);}
+.auth-tab.active{background:var(--gold-gradient);color:#0A0A0A;}
+/* Google Button */
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:var(--rmd);background:#fff;color:#1a1a1a;font-family:var(--font-primary);font-weight:700;font-size:0.9rem;cursor:pointer;border:none;transition:all var(--ts);margin-bottom:18px;}
+.btn-google:hover{box-shadow:0 4px 24px rgba(255,255,255,0.15);transform:translateY(-1px);}
+.divider{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border-color);}
+.divider span{font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono);}
+/* Form */
+.form-field{margin-bottom:14px;}
+.form-field label{display:block;font-size:0.72rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;font-family:var(--font-mono);}
+.form-field input{width:100%;padding:11px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:var(--rmd);color:var(--text-primary);font-size:0.9rem;font-family:var(--font-secondary);outline:none;transition:border-color var(--tf);}
+.form-field input:focus{border-color:var(--gold-500);box-shadow:0 0 0 3px rgba(255,215,0,0.08);}
+.form-field input::placeholder{color:var(--text-muted);}
+.auth-submit{width:100%;padding:13px;background:var(--gold-gradient);color:#0A0A0A;border:none;border-radius:var(--rmd);font-family:var(--font-primary);font-weight:700;font-size:0.95rem;cursor:pointer;transition:all var(--ts);margin-top:4px;}
+.auth-submit:hover{box-shadow:0 4px 24px rgba(255,215,0,0.4);transform:translateY(-1px);}
+.auth-msg{font-size:0.8rem;text-align:center;margin-top:12px;min-height:20px;font-family:var(--font-mono);}
+.auth-msg.success{color:var(--green);}
+.auth-msg.error{color:var(--red);}
+.auth-switch{text-align:center;margin-top:14px;font-size:0.82rem;color:var(--text-muted);}
+.auth-switch button{color:var(--gold-400);font-weight:600;font-size:0.82rem;background:none;border:none;cursor:pointer;font-family:var(--font-secondary);}
+.auth-switch button:hover{text-decoration:underline;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* FEATURES */
+.features-section{background:var(--bg-primary);}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+.feat-card{padding:30px 22px;text-align:center;}
+.feat-icon{display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;border-radius:16px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.1);margin-bottom:16px;font-size:1.7rem;transition:all var(--ts);}
+.feat-card:hover .feat-icon{background:rgba(255,215,0,0.11);border-color:rgba(255,215,0,0.24);box-shadow:0 0 24px rgba(255,215,0,0.1);}
+.feat-card h3{font-size:1rem;font-weight:700;margin-bottom:8px;}
+.feat-card p{font-size:0.85rem;color:var(--text-secondary);line-height:1.7;}
+
+/* DOWNLOAD */
+.download-section{background:var(--bg-secondary);}
+.dl-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;max-width:780px;margin:0 auto;}
+.dl-card{padding:34px 28px;text-align:center;}
+.dl-icon{font-size:2.6rem;margin-bottom:14px;}
+.dl-card h3{font-size:1.15rem;font-weight:800;margin-bottom:8px;}
+.dl-card p{font-size:0.85rem;color:var(--text-secondary);margin-bottom:22px;line-height:1.6;}
+.dl-meta{font-size:0.72rem;color:var(--text-muted);margin-top:10px;font-family:var(--font-mono);}
+
+/* PREVIEW */
+.preview-box{max-width:980px;margin:0 auto;border-radius:var(--rxl);overflow:hidden;border:1px solid var(--border-color);box-shadow:0 28px 80px rgba(0,0,0,0.6),0 0 60px rgba(255,215,0,0.05);}
+.preview-bar{background:#0D0D0D;border-bottom:1px solid var(--border-color);padding:9px 14px;display:flex;align-items:center;gap:10px;}
+.preview-dots{display:flex;gap:6px;}
+.preview-dot{width:9px;height:9px;border-radius:50%;}
+.preview-dot.r{background:#EF4444;}.preview-dot.y{background:#F59E0B;}.preview-dot.g{background:#10B981;}
+.preview-url{flex:1;background:#181818;border-radius:5px;padding:3px 12px;font-family:var(--font-mono);font-size:0.74rem;color:var(--text-muted);text-align:center;}
+.preview-header{background:#0A0A0A;border-bottom:1px solid rgba(255,215,0,0.1);padding:11px 18px;display:flex;align-items:center;justify-content:space-between;}
+.preview-header-logo{font-family:var(--font-primary);font-weight:900;letter-spacing:2px;font-size:1rem;color:var(--gold-400);}
+.preview-badges{display:flex;gap:7px;}
+.pbadge{padding:3px 9px;border-radius:4px;font-family:var(--font-mono);font-size:0.67rem;font-weight:700;}
+.pbadge.on{background:rgba(16,185,129,0.14);color:#10B981;border:1px solid rgba(16,185,129,0.28);}
+.pbadge.gd{background:rgba(255,215,0,0.08);color:var(--gold-400);border:1px solid rgba(255,215,0,0.18);}
+.preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;padding:12px;background:#080808;}
+.pcard{background:#121212;border-radius:7px;border:1px solid rgba(255,215,0,0.1);padding:9px;aspect-ratio:4/3;display:flex;flex-direction:column;}
+.pcard-h{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
+.pcard-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);}
+.pcard-name{font-family:var(--font-mono);font-size:0.58rem;font-weight:700;color:var(--text-secondary);}
+.pcard-body{flex:1;background:#060606;border-radius:4px;display:flex;align-items:center;justify-content:center;}
+.pcard-body span{font-family:var(--font-mono);font-size:0.54rem;color:var(--gold-400);opacity:0.65;}
+
+/* FAQ */
+.faq-section{background:var(--bg-primary);}
+.faq-list{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px;}
+.faq-item{overflow:hidden;}
+.faq-item:hover{transform:none;}
+.faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;padding:19px 22px;text-align:left;font-size:0.92rem;font-weight:600;font-family:var(--font-primary);color:var(--text-primary);cursor:pointer;transition:color var(--tf);}
+.faq-q:hover{color:var(--gold-400);}
+.faq-chev{flex-shrink:0;transition:transform 0.4s;color:var(--gold-500);}
+.faq-item.open .faq-chev{transform:rotate(180deg);}
+.faq-ans{max-height:0;overflow:hidden;transition:max-height 0.5s cubic-bezier(0.4,0,0.2,1),padding 0.5s;padding:0 22px;}
+.faq-item.open .faq-ans{max-height:200px;padding:0 22px 20px;}
+.faq-ans p{font-size:0.88rem;color:var(--text-secondary);line-height:1.8;}
+
+/* CTA */
+.cta-section{background:var(--bg-secondary);padding:80px 0;}
+.cta-box{text-align:center;padding:60px 40px;background:linear-gradient(135deg,rgba(255,215,0,0.05) 0%,rgba(10,10,10,0.9) 100%);border:1px solid var(--border-color);border-radius:var(--rxl);position:relative;overflow:hidden;}
+.cta-box::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at center,rgba(255,215,0,0.03) 0%,transparent 50%);animation:rotate 20s linear infinite;}
+@keyframes rotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.cta-content{position:relative;z-index:1;}
+.cta-box h2{font-size:clamp(1.5rem,2.8vw,2.4rem);font-weight:900;margin-bottom:14px;}
+.cta-box p{font-size:0.97rem;color:var(--text-secondary);max-width:500px;margin:0 auto 28px;line-height:1.7;}
+.cta-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;}
+
+/* FOOTER */
+.footer{background:#080808;padding:50px 0 0;border-top:1px solid var(--border-color);}
+.footer-container{max-width:1200px;margin:0 auto;padding:0 32px;}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr;gap:48px;padding-bottom:36px;}
+.footer-brand-logo{font-family:var(--font-primary);font-size:1.5rem;font-weight:900;letter-spacing:2.5px;color:var(--gold-400);margin-bottom:10px;}
+.footer-brand p{font-size:0.83rem;color:var(--text-muted);line-height:1.7;}
+.footer-links h4{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold-500);margin-bottom:14px;font-family:var(--font-mono);}
+.footer-links li{margin-bottom:9px;}
+.footer-links a{font-size:0.83rem;color:var(--text-muted);transition:color var(--tf);}
+.footer-links a:hover{color:var(--gold-400);}
+.footer-bottom{border-top:1px solid var(--border-color);padding:18px 0;display:flex;align-items:center;justify-content:space-between;}
+.footer-copy{font-size:0.76rem;color:var(--text-muted);}
+.footer-made{font-family:var(--font-primary);font-size:0.85rem;font-weight:600;color:var(--text-secondary);}
+
+/* PWA INSTALL BAR */
+#pwa-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:2000;background:linear-gradient(135deg,#141404 0%,#0A0A00 100%);border-top:1px solid rgba(255,215,0,0.22);padding:13px 24px;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 -8px 30px rgba(0,0,0,0.5);}
+#pwa-bar.show{display:flex;animation:slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.pwa-logo{font-family:var(--font-primary);font-size:1rem;font-weight:900;letter-spacing:2px;color:var(--gold-400);}
+.pwa-text{font-size:0.82rem;color:var(--text-secondary);}
+.pwa-btns{display:flex;gap:9px;align-items:center;}
+#pwa-install-btn{padding:8px 18px;background:var(--gold-gradient);color:#0A0A0A;border-radius:8px;font-family:var(--font-primary);font-weight:700;font-size:0.82rem;cursor:pointer;border:none;transition:all 0.2s;}
+#pwa-install-btn:hover{box-shadow:0 4px 18px rgba(255,215,0,0.4);}
+#pwa-dismiss-btn{padding:8px 12px;color:var(--text-muted);font-size:0.82rem;cursor:pointer;border:none;background:none;transition:color 0.2s;}
+#pwa-dismiss-btn:hover{color:var(--text-secondary);}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(32px);transition:all 0.72s cubic-bezier(0.4,0,0.2,1);}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:var(--bg-primary);}
+::-webkit-scrollbar-thumb{background:rgba(255,215,0,0.18);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,215,0,0.35);}
+::selection{background:rgba(255,215,0,0.22);color:var(--gold-light);}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+    .steps-grid{grid-template-columns:1fr;max-width:440px;margin:0 auto;}
+    .security-grid{grid-template-columns:1fr;gap:32px;}
+    .auth-grid{grid-template-columns:1fr;gap:28px;max-width:480px;}
+    .features-grid{grid-template-columns:repeat(2,1fr);}
+    .dl-cards{grid-template-columns:1fr;max-width:400px;}
+    .preview-grid{grid-template-columns:repeat(2,1fr);}
+    .footer-top{grid-template-columns:1fr 1fr;}
+    .footer-brand{grid-column:span 2;}
+}
+@media(max-width:768px){
+    :root{--nav-height:64px;}
+    .nav-container{padding:0 18px;}
+    .nav-links{position:fixed;top:0;right:-100%;width:260px;height:100vh;background:rgba(10,10,10,0.98);flex-direction:column;padding:85px 24px 36px;gap:4px;transition:right var(--ts);border-left:1px solid var(--border-color);}
+    .nav-links.open{right:0;}
+    .nav-link{width:100%;padding:12px 14px;font-size:0.97rem;}
+    .nav-cta,.nav-signup{display:none;}
+    .hamburger{display:flex;}
+    .hero{padding:100px 18px 55px;}
+    .features-grid{grid-template-columns:1fr;}
+    .sc{padding:0 18px;}
+    .footer-top{grid-template-columns:1fr;gap:24px;}
+    .footer-brand{grid-column:span 1;}
+    .footer-bottom{flex-direction:column;gap:8px;text-align:center;}
+    .pwa-text{display:none;}
+    .cta-box{padding:38px 18px;}
+    .section{padding:70px 0;}
+}
+@media(max-width:480px){
+    .hero{padding:88px 14px 48px;}
+    .hero-stats{gap:24px;flex-wrap:wrap;}
+    .hero-actions .btn{width:100%;justify-content:center;}
+    .preview-grid{grid-template-columns:repeat(2,1fr);}
+}
+    </style>
+</head>
+<body>
+
+<!-- ══ NAVBAR ══════════════════════════════════════════════════════ -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <a href="#" class="nav-logo">
+            <div class="nav-logo-text">MONKGO</div>
+            <span class="nav-logo-sub">MINER OPERATIONS SYSTEM</span>
+        </a>
+        <ul class="nav-links" id="nav-links">
+            <li><a href="#how" class="nav-link">How It Works</a></li>
+            <li><a href="#security" class="nav-link">Security</a></li>
+            <li><a href="#features" class="nav-link">Features</a></li>
+            <li><a href="#download" class="nav-link">Download</a></li>
+            <li><a href="#account" class="nav-link">Sign Up</a></li>
+        </ul>
+        <div class="nav-right">
+            <a href="#account" class="nav-signup" id="nav-signup-btn">Create Account</a>
+            <a href="https://app.monkgo.in" class="nav-cta" id="nav-login-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Dashboard
+            </a>
+        </div>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+    </div>
+</nav>
+
+<!-- ══ HERO ════════════════════════════════════════════════════════ -->
+<section class="hero" id="home">
+    <div class="hero-bg">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-orb hero-orb-3"></div>
+    </div>
+    <div class="hero-content">
+        <div class="hero-badge">🛡️ MILITARY-GRADE ENCRYPTED MONITORING SYSTEM</div>
+        <div class="hero-logo">MONKGO</div>
+        <div class="hero-tagline">MINER OPERATIONS SYSTEM • CORE COMMAND CONTROL</div>
+        <h1 class="hero-title">Monitor Your Entire Miner Farm<br>From <span class="gold-text">Anywhere In The World</span></h1>
+        <p class="hero-subtitle">Install the MonkGo Client on your farm PC. Your entire fleet of ASIC miners appears live in your secure private dashboard — accessible from any phone or PC, fully encrypted.</p>
+        <div class="hero-actions">
+            <a href="#download" class="btn btn-primary btn-lg" id="btn-hero-dl">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download PC Client
+            </a>
+            <a href="#account" class="btn btn-outline btn-lg">Create Free Account →</a>
+        </div>
+        <div class="hero-stats">
+            <div class="stat-item"><span class="stat-number">24</span>x7<span class="stat-label">Live Monitoring</span></div>
+            <div class="stat-item"><span class="stat-number" data-count="0">0</span><span class="stat-label">Open Router Ports</span></div>
+            <div class="stat-item"><span class="stat-number">256</span>-bit<span class="stat-label">Encryption</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ HOW IT WORKS ════════════════════════════════════════════════ -->
+<section class="section" id="how" style="background:var(--bg-secondary);">
+    <div class="sc">
+        <div class="sh reveal">
+            <span class="stag">Quick Setup</span>
+            <h2 class="section-title">Up and Running in <span class="gold-text">3 Steps</span></h2>
+            <p class="section-desc">No complex networking. No open ports. No static IP. One account connects everything.</p>
+        </div>
+        <div class="steps-grid">
+            <div class="step-card glass-card reveal">
+                <div class="step-num">1</div>
+                <h3>Create Your Account</h3>
+                <p>Sign up free below with email or Google. <strong style="color:var(--gold-400)">The same account</strong> logs into both the PC Client and your online dashboard — one identity, everything connected.</p>
+            </div>
+            <div class="step-card glass-card reveal">
+                <div class="step-num">2</div>
+                <h3>Install PC Client & Connect</h3>
+                <p>Download MonkGo.exe, install on any Windows PC on your farm. Enter your account credentials. It auto-discovers all ASIC miners on your network in seconds.</p>
+            </div>
+            <div class="step-card glass-card reveal">
+                <div class="step-num">3</div>
+                <h3>View Live Dashboard</h3>
+                <p>Open <strong style="color:var(--gold-400)">app.monkgo.in</strong> from any phone or PC anywhere in the world. Login with the same account and all your miners appear live instantly.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ SECURITY ════════════════════════════════════════════════════ -->
+<section class="section security-section" id="security">
+    <div class="sc">
+        <div class="sh reveal">
+            <span class="stag">Enterprise Security</span>
+            <h2 class="section-title">Your Farm is Completely <span class="gold-text">Invisible to the Internet</span></h2>
+        </div>
+        <div class="security-grid">
+            <div class="security-text reveal">
+                <p>Most remote access tools expose your miners to the open internet — creating serious security risks. MonkGo works the opposite way.</p>
+                <p>The MonkGo Client creates an <strong style="color:var(--gold-400)">outbound-only encrypted connection</strong> from your farm to Cloudflare's global network. Your router <strong>never opens a single incoming port</strong>. Your miners' real IP addresses are <strong>never visible</strong> to anyone outside your farm.</p>
+                <div class="security-badges">
+                    <div class="sec-badge">
+                        <div class="sec-badge-icon">🔒</div>
+                        <div class="sec-badge-text">
+                            <strong>Zero Open Ports</strong>
+                            <span>Your router firewall stays 100% closed. No incoming connections accepted.</span>
+                        </div>
+                    </div>
+                    <div class="sec-badge">
+                        <div class="sec-badge-icon">🛡️</div>
+                        <div class="sec-badge-text">
+                            <strong>256-bit AES Encryption</strong>
+                            <span>All data between your farm and dashboard is end-to-end encrypted.</span>
+                        </div>
+                    </div>
+                    <div class="sec-badge">
+                        <div class="sec-badge-icon">👁️</div>
+                        <div class="sec-badge-text">
+                            <strong>Hidden Miner URLs</strong>
+                            <span>Dashboard never stores miner addresses in HTML. They exist only in RAM, invisible to browser DevTools.</span>
+                        </div>
+                    </div>
+                    <div class="sec-badge">
+                        <div class="sec-badge-icon">🌐</div>
+                        <div class="sec-badge-text">
+                            <strong>Cloudflare Global Network</strong>
+                            <span>Traffic routes through 300+ global Cloudflare data centers — the same infrastructure protecting Fortune 500 companies.</span>
+                        </div>
+                    </div>
+                    <div class="sec-badge">
+                        <div class="sec-badge-icon">🔑</div>
+                        <div class="sec-badge-text">
+                            <strong>Account-Locked Access</strong>
+                            <span>Only your authenticated account can access your miners. Each farm is fully isolated from other users.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="security-visual reveal">
+                <div class="sec-vis-title">▸ CONNECTION ARCHITECTURE</div>
+                <div class="sec-flow">
+                    <div class="sec-flow-box miner">⛏ YOUR ASIC MINERS<br><span style="font-size:0.62rem;opacity:0.7">LOCAL NETWORK — 192.168.x.x</span></div>
+                    <div style="text-align:center;color:var(--green);font-size:0.7rem;font-family:var(--font-mono);">▼ outbound only — never incoming</div>
+                    <div class="sec-flow-box cloud">🌐 CLOUDFLARE GLOBAL NETWORK<br><span style="font-size:0.62rem;opacity:0.7">256-BIT ENCRYPTED • 300+ LOCATIONS</span></div>
+                    <div style="text-align:center;color:var(--green);font-size:0.7rem;font-family:var(--font-mono);">▼ authenticated session only</div>
+                    <div class="sec-flow-box dashboard">📱 YOUR DASHBOARD — app.monkgo.in<br><span style="font-size:0.62rem;opacity:0.7">LOCKED TO YOUR ACCOUNT ONLY</span></div>
+                </div>
+                <div class="sec-lock-badge" style="margin-top:18px;">
+                    <span>🔒 YOUR REAL IP: NEVER EXPOSED</span>
+                </div>
+                <div class="sec-lock-badge" style="margin-top:8px;background:rgba(255,215,0,0.03);">
+                    <span style="color:var(--gold-500)">⚡ ROUTER PORTS OPENED: ZERO</span>
+                </div>
+                <div style="margin-top:22px;padding:14px;background:rgba(16,185,129,0.04);border-radius:10px;border:1px solid rgba(16,185,129,0.12);">
+                    <p style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);line-height:1.7;">
+                        ✓ No VPN required &nbsp;|&nbsp; ✓ No static IP needed<br>
+                        ✓ No port forwarding &nbsp;|&nbsp; ✓ No firewall changes<br>
+                        ✓ Works behind NAT &nbsp;|&nbsp; ✓ Works on mobile data
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ SIGNUP / LOGIN ══════════════════════════════════════════════ -->
+<section class="section auth-section" id="account">
+    <div class="sc">
+        <div class="sh reveal">
+            <span class="stag">One Account</span>
+            <h2 class="section-title">Your <span class="gold-text">MonkGo Account</span> — One Login. Everything Connected.</h2>
+            <p class="section-desc">The same email and password you create here logs into both the PC Client on your farm and your online dashboard at app.monkgo.in.</p>
+        </div>
+        <div class="auth-grid">
+            <div class="auth-info reveal">
+                <h3>One Account.<br>Two Access Points.</h3>
+                <p>Create your free MonkGo account below. Once registered, use the <strong>same email and password</strong> in:</p>
+                <div class="auth-perks">
+                    <div class="auth-perk"><div class="tick">✓</div>The <strong>MonkGo.exe</strong> PC Client installed on your farm</div>
+                    <div class="auth-perk"><div class="tick">✓</div>The web dashboard at <strong style="color:var(--gold-400)">app.monkgo.in</strong> from anywhere</div>
+                    <div class="auth-perk"><div class="tick">✓</div>The MonkGo <strong>mobile app</strong> (PWA — install on phone)</div>
+                    <div class="auth-perk"><div class="tick">✓</div>Manage <strong>multiple farms</strong> under one account</div>
+                    <div class="auth-perk"><div class="tick">✓</div>Your secret key is <strong>auto-generated</strong> — no manual setup</div>
+                </div>
+                <div style="margin-top:24px;padding:16px;background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.12);border-radius:12px;">
+                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;">
+                        <span style="color:var(--gold-400);font-weight:700;">Already have an account?</span><br>
+                        <a href="https://app.monkgo.in" style="color:var(--gold-400);font-size:0.85rem;font-weight:600;">→ Go to app.monkgo.in to log in</a>
+                    </p>
+                </div>
+            </div>
+            <div class="auth-card reveal">
+                <!-- Tabs -->
+                <div class="auth-tabs">
+                    <div class="auth-tab active" id="tab-signup" onclick="switchTab('signup')">Create Account</div>
+                    <div class="auth-tab" id="tab-login" onclick="switchTab('login')">Sign In</div>
+                </div>
+
+                <!-- Google Button -->
+                <button class="btn-google" id="btn-google-auth" onclick="signInWithGoogle()">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    Continue with Google
+                </button>
+
+                <div class="divider"><span>OR</span></div>
+
+                <!-- SIGN UP PANEL -->
+                <div class="panel active" id="panel-signup">
+                    <div class="form-field">
+                        <label>Full Name</label>
+                        <input type="text" id="su-name" placeholder="Vikas Kumar" autocomplete="name">
+                    </div>
+                    <div class="form-field">
+                        <label>Email Address</label>
+                        <input type="email" id="su-email" placeholder="you@email.com" autocomplete="email">
+                    </div>
+                    <div class="form-field">
+                        <label>Password</label>
+                        <input type="password" id="su-pass" placeholder="Min 8 characters" autocomplete="new-password">
+                    </div>
+                    <button class="auth-submit" id="btn-signup" onclick="doSignup()">Create My Account →</button>
+                    <div class="auth-msg" id="msg-signup"></div>
+                    <div class="auth-switch">Already have an account? <button onclick="switchTab('login')">Sign in</button></div>
+                </div>
+
+                <!-- LOGIN PANEL -->
+                <div class="panel" id="panel-login">
+                    <div class="form-field">
+                        <label>Email Address</label>
+                        <input type="email" id="li-email" placeholder="you@email.com" autocomplete="email">
+                    </div>
+                    <div class="form-field">
+                        <label>Password</label>
+                        <input type="password" id="li-pass" placeholder="Your password" autocomplete="current-password">
+                    </div>
+                    <button class="auth-submit" id="btn-login" onclick="doLogin()">Sign In & Go to Dashboard →</button>
+                    <div class="auth-msg" id="msg-login"></div>
+                    <div class="auth-switch">No account yet? <button onclick="switchTab('signup')">Create free account</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ DASHBOARD PREVIEW ══════════════════════════════════════════ -->
+<section class="section" id="preview" style="background:var(--bg-primary);">
+    <div class="sc">
+        <div class="sh reveal">
+            <span class="stag">Live Interface</span>
+            <h2 class="section-title">Full Miner Dashboard <span class="gold-text">In Every Card</span></h2>
+            <p class="section-desc">Each card shows the real interactive firmware UI. Control, tune, and monitor all miners from one secure screen.</p>
+        </div>
+        <div class="preview-box reveal">
+            <div class="preview-bar">
+                <div class="preview-dots"><div class="preview-dot r"></div><div class="preview-dot y"></div><div class="preview-dot g"></div></div>
+                <div class="preview-url">app.monkgo.in — MonkGo Secure Command Center</div>
+            </div>
+            <div class="preview-header">
+                <div class="preview-header-logo">MONKGO</div>
+                <div class="preview-badges"><span class="pbadge on">● ACTIVE: 4</span><span class="pbadge gd">🔒 SECURE</span></div>
+            </div>
+            <div class="preview-grid">
+                <div class="pcard"><div class="pcard-h"><div class="pcard-dot"></div><div class="pcard-name">FARM1 NODE 01</div></div><div class="pcard-body"><span>Vnish OS Dashboard</span></div></div>
+                <div class="pcard"><div class="pcard-h"><div class="pcard-dot"></div><div class="pcard-name">FARM1 NODE 02</div></div><div class="pcard-body"><span>Braiins OS UI</span></div></div>
+                <div class="pcard"><div class="pcard-h"><div class="pcard-dot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div><div class="pcard-name">FARM1 NODE 03</div></div><div class="pcard-body"><span style="color:var(--red)">OFFLINE</span></div></div>
+                <div class="pcard"><div class="pcard-h"><div class="pcard-dot"></div><div class="pcard-name">FARM1 NODE 04</div></div><div class="pcard-body"><span>Stock Firmware UI</span></div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ FEATURES ════════════════════════════════════════════════════ -->
+<section class="section features-section" id="features">
+    <div class="sc">
+        <div class="sh reveal">
+            <span class="stag">Why MonkGo</span>
+            <h2 class="section-title">Everything You Need to<br><span class="gold-text">Control Your Farm Remotely</span></h2>
+        </div>
+        <div class="features-grid">
+            <div class="feat-card glass-card reveal"><div class="feat-icon">🔒</div><h3>Fully Encrypted</h3><p>All farm-to-dashboard traffic is end-to-end encrypted with 256-bit AES. Nobody — not even MonkGo — can read your data.</p></div>
+            <div class="feat-card glass-card reveal"><div class="feat-icon">⚡</div><h3>Auto-Discovery</h3><p>The PC client scans your local network and instantly finds all ASIC miners without manual IP entry or configuration.</p></div>
+            <div class="feat-card glass-card reveal"><div class="feat-icon">🖥️</div><h3>Full Native Firmware UI</h3><p>Each miner card loads the complete interactive firmware — Vnish, Braiins, Antminer stock. Not just data — full control.</p></div>
+            <div class="feat-card glass-card reveal"><div class="feat-icon">📱</div><h3>All Devices, One Login</h3><p>Same account — use on any phone, tablet, or PC. Install as a home-screen app for instant one-tap access.</p></div>
+            <div class="feat-card glass-card reveal"><div class="feat-icon">🏭</div><h3>Multi-Farm Support</h3><p>Add unlimited farms to one account. Miners are grouped by farm. Switch between locations in one click.</p></div>
+            <div class="feat-card glass-card reveal"><div class="feat-icon">🛡️</div><h3>Private by Design</h3><p>Miner addresses never stored in HTML or logs. Your router IP is never exposed. Each account is fully isolated.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ DOWNLOAD ════════════════════════════════════════════════════ -->
+<section class="section download-section" id="download">
+    <div class="sc">
+        <div class="sh reveal">
+            <span class="stag">Get Started</span>
+            <h2 class="section-title">Install MonkGo <span class="gold-text">Client</span></h2>
+            <p class="section-desc">Install on your farm, log in with your MonkGo account, and your miners appear live in seconds.</p>
+        </div>
+        <div class="dl-cards">
+            <div class="dl-card glass-card reveal">
+                <div class="dl-icon">💻</div>
+                <h3>MonkGo PC Client</h3>
+                <p>Install on any Windows PC on your farm's network. Auto-starts with Windows. Runs silently in background.</p>
+                <a href="#" class="btn btn-primary btn-full" id="btn-dl-exe">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download MonkGo.exe
+                </a>
+                <p class="dl-meta">Windows 10/11 • x64 • ~35 MB • Free</p>
+            </div>
+            <div class="dl-card glass-card reveal">
+                <div class="dl-icon">🌐</div>
+                <h3>Open Dashboard</h3>
+                <p>Access your live miner dashboard from any device. Install as a PWA for an instant home-screen shortcut.</p>
+                <a href="https://app.monkgo.in" class="btn btn-outline btn-full" id="btn-open-dash">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Open My Dashboard
+                </a>
+                <p class="dl-meta">Phone • Tablet • PC • PWA Installable</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ FAQ ══════════════════════════════════════════════════════════ -->
+<section class="section faq-section" id="faq">
+    <div class="sc">
+        <div class="sh reveal">
+            <span class="stag">Help Center</span>
+            <h2 class="section-title">Frequently Asked <span class="gold-text">Questions</span></h2>
+        </div>
+        <div class="faq-list">
+            <div class="faq-item glass-card reveal">
+                <button class="faq-q"><span>Is one account enough for both the PC Client and dashboard?</span><svg class="faq-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <div class="faq-ans"><p>Yes — create one account here (or on app.monkgo.in). Use the same email and password in the MonkGo.exe PC Client on your farm, and to log into your online dashboard from anywhere. One identity, fully linked.</p></div>
+            </div>
+            <div class="faq-item glass-card reveal">
+                <button class="faq-q"><span>Does it need port forwarding or open router ports?</span><svg class="faq-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <div class="faq-ans"><p>Absolutely not. MonkGo uses encrypted outbound connections through Cloudflare's global network. Your router never opens any incoming ports. Your farm's real IP address is never visible to the internet.</p></div>
+            </div>
+            <div class="faq-item glass-card reveal">
+                <button class="faq-q"><span>Can I sign up with my Google account?</span><svg class="faq-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <div class="faq-ans"><p>Yes! Click "Continue with Google" to create your account or sign in instantly with one click — no password needed. Your Google account is linked securely.</p></div>
+            </div>
+            <div class="faq-item glass-card reveal">
+                <button class="faq-q"><span>Is my miner data visible to MonkGo or anyone else?</span><svg class="faq-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <div class="faq-ans"><p>No. All data is end-to-end encrypted. MonkGo servers never see your miner content. Miner addresses are never stored in HTML or databases — they exist only in your RAM session and are destroyed on logout.</p></div>
+            </div>
+            <div class="faq-item glass-card reveal">
+                <button class="faq-q"><span>Does the farm PC need to stay on?</span><svg class="faq-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <div class="faq-ans"><p>Yes — MonkGo.exe must run on a PC on the same local network as your miners. It auto-starts with Windows and runs invisibly in the background. Any low-power mini-PC works.</p></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ CTA ══════════════════════════════════════════════════════════ -->
+<section class="cta-section">
+    <div class="sc">
+        <div class="cta-box glass-card reveal">
+            <div class="cta-content">
+                <h2>Start Monitoring Your Farm <span class="gold-text">Securely</span></h2>
+                <p>Create your free account, download the PC Client, and your entire miner fleet will be visible in your private dashboard in under 2 minutes.</p>
+                <div class="cta-actions">
+                    <a href="#account" class="btn btn-primary btn-lg">Create Free Account →</a>
+                    <a href="https://app.monkgo.in" class="btn btn-outline btn-lg">Open Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ FOOTER ════════════════════════════════════════════════════════ -->
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="footer-brand-logo">MONKGO</div>
+                <p>Encrypted remote ASIC miner monitoring. Secure, private, and accessible from anywhere.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Product</h4>
+                <ul>
+                    <li><a href="#how">How It Works</a></li>
+                    <li><a href="#security">Security</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#download">Download</a></li>
+                    <li><a href="https://app.monkgo.in">Dashboard</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Account</h4>
+                <ul>
+                    <li><a href="#account">Create Account</a></li>
+                    <li><a href="https://app.monkgo.in">Sign In</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p class="footer-copy">© 2026 MonkGo. All rights reserved.</p>
+            <p class="footer-made">A <span class="gold-text">MonkGo</span> Product</p>
+        </div>
+    </div>
+</footer>
+
+<!-- ══ PWA INSTALL BAR ═══════════════════════════════════════════════ -->
+<div id="pwa-bar">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div class="pwa-logo">MONKGO</div>
+        <div class="pwa-text">Install as app for instant access</div>
+    </div>
+    <div class="pwa-btns">
+        <button id="pwa-install-btn">📲 Install App</button>
+        <button id="pwa-dismiss-btn">Not now</button>
+    </div>
+</div>
+
+<script>
+/* ============================================
+   MONKGO LANDING — Auth + PWA + UI
+   ============================================ */
+const SUPABASE_URL  = 'https://qsujmqgaxrtqnrbawfup.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzdWptcWdheHJ0cW5yYmF3ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjEzNjMsImV4cCI6MjEwMjEzNzM2M30.KQvaaL_-bZgwUW4pUxqCsQC0ZhGWnWnLDfvHDYDVwB8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+/* ── Auth helpers ───────────────────────────────────────────── */
+function setMsg(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'auth-msg ' + type;
+}
+function setBtnState(id, loading, text) {
+    const btn = document.getElementById(id);
+    btn.disabled = loading;
+    btn.textContent = loading ? '⏳ Please wait...' : text;
+}
+
+async function doSignup() {
+    const name  = document.getElementById('su-name').value.trim();
+    const email = document.getElementById('su-email').value.trim();
+    const pass  = document.getElementById('su-pass').value;
+    if (!email || !pass) { setMsg('msg-signup', '⚠ Please fill in email and password.', 'error'); return; }
+    if (pass.length < 8)  { setMsg('msg-signup', '⚠ Password must be at least 8 characters.', 'error'); return; }
+    setBtnState('btn-signup', true, '');
+    const { data, error } = await sb.auth.signUp({
+        email, password: pass,
+        options: { data: { full_name: name } }
+    });
+    setBtnState('btn-signup', false, 'Create My Account →');
+    if (error) { setMsg('msg-signup', '✗ ' + error.message, 'error'); return; }
+    setMsg('msg-signup', '✓ Account created! Check your email to confirm, then open app.monkgo.in', 'success');
+    setTimeout(() => { window.location.href = 'https://app.monkgo.in'; }, 2800);
+}
+
+async function doLogin() {
+    const email = document.getElementById('li-email').value.trim();
+    const pass  = document.getElementById('li-pass').value;
+    if (!email || !pass) { setMsg('msg-login', '⚠ Please enter email and password.', 'error'); return; }
+    setBtnState('btn-login', true, '');
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    setBtnState('btn-login', false, 'Sign In & Go to Dashboard →');
+    if (error) { setMsg('msg-login', '✗ ' + error.message, 'error'); return; }
+    setMsg('msg-login', '✓ Signed in! Redirecting to dashboard...', 'success');
+    setTimeout(() => { window.location.href = 'https://app.monkgo.in'; }, 1200);
+}
+
+async function signInWithGoogle() {
+    const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'https://app.monkgo.in' }
+    });
+    if (error) alert('Google sign-in error: ' + error.message);
+}
+
+/* ── Tab switching ──────────────────────────────────────────── */
+function switchTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+}
+
+/* ── Navbar scroll ──────────────────────────────────────────── */
+window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+}, { passive: true });
+
+/* ── Hamburger ──────────────────────────────────────────────── */
+const hamburger = document.getElementById('hamburger');
+const navLinks  = document.getElementById('nav-links');
+hamburger.addEventListener('click', () => {
+    hamburger.classList.toggle('active');
+    navLinks.classList.toggle('open');
+});
+navLinks.querySelectorAll('.nav-link').forEach(l => l.addEventListener('click', () => {
+    hamburger.classList.remove('active');
+    navLinks.classList.remove('open');
+}));
+
+/* ── Scroll reveal ──────────────────────────────────────────── */
+const ro = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1, rootMargin: '0px 0px -36px 0px' });
+document.querySelectorAll('.reveal').forEach((el, i) => {
+    el.style.transitionDelay = `${(i % 4) * 0.06}s`;
+    ro.observe(el);
+});
+
+/* ── FAQ ────────────────────────────────────────────────────── */
+document.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => {
+        const open = item.classList.contains('open');
+        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+        if (!open) item.classList.add('open');
+    });
+});
+
+/* ── Parallax orbs ──────────────────────────────────────────── */
+window.addEventListener('mousemove', e => {
+    const x = (e.clientX/window.innerWidth-0.5)*2, y = (e.clientY/window.innerHeight-0.5)*2;
+    document.querySelectorAll('.hero-orb').forEach((o, i) => {
+        o.style.transform = `translate(${x*(i+1)*10}px,${y*(i+1)*10}px)`;
+    });
+}, { passive: true });
+
+/* ── EXE download ───────────────────────────────────────────── */
+const EXE_URL = '#'; // TODO: replace with your R2 public URL
+document.getElementById('btn-dl-exe').addEventListener('click', e => {
+    if (EXE_URL === '#') {
+        e.preventDefault();
+        alert('MonkGo.exe download coming soon! Create your account now to be ready.');
+    }
+});
+
+/* ── PWA install bar ────────────────────────────────────────── */
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt = e;
+    document.getElementById('pwa-bar').classList.add('show');
+});
+document.getElementById('pwa-install-btn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('pwa-bar').classList.remove('show');
+});
+document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
+    document.getElementById('pwa-bar').classList.remove('show');
+});
+
+/* ── Service Worker ─────────────────────────────────────────── */
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
